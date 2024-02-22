@@ -71,9 +71,6 @@ namespace KarlsonMP
             foreach (Collider c in UnityEngine.Object.FindObjectsOfType<Collider>())
                 if (c.gameObject != PlayerMovement.Instance.gameObject && c.gameObject.GetComponent<DetectWeapons>() == null) UnityEngine.Object.Destroy(c.gameObject);
 
-            if (levelData.startingGun != 0)
-                PlayerMovement.Instance.spawnWeapon = KMP_PrefabManager.NewPistol();
-
             PlayerMovement.Instance.transform.position = levelData.startPosition;
             PlayerMovement.Instance.playerCam.transform.localRotation = Quaternion.Euler(0f, levelData.startOrientation, 0f);
             PlayerMovement.Instance.orientation.transform.localRotation = Quaternion.Euler(0f, levelData.startOrientation, 0f);

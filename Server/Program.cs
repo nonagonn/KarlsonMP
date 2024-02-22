@@ -16,6 +16,7 @@ namespace ServerKMP
 
         static void Main(string[] _)
         {
+            Config.LoadConfig();
             mainThread = new Thread(MainThread);
             mainThread.Start();
 
@@ -45,6 +46,9 @@ namespace ServerKMP
                 {
                     Update();
                     _nextLoop = _nextLoop.AddMilliseconds(Config.MSPT);
+
+                    if(_nextLoop > DateTime.Now)
+                        Thread.Sleep(_nextLoop - DateTime.Now); // don't overload server
                 }
             }
 
@@ -56,7 +60,6 @@ namespace ServerKMP
 
         static void Update()
         {
-            //Console.WriteLine("tick");
             NetworkManager.Update();
         }
     }

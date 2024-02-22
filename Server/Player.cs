@@ -10,15 +10,26 @@ namespace ServerKMP
     {
         public ushort id;
         public string username;
+        public int hp;
+        public DateTime invicibleUntil;
 
         public Player(ushort _id)
         {
             id = _id;
+            username = "<nil>";
+            hp = 100;
+            invicibleUntil = DateTime.Now;
         }
 
         public void SetUsername(string _username)
         {
             username = _username;
+        }
+
+        public void MarkRespawn()
+        {
+            invicibleUntil = DateTime.Now.AddSeconds(3);
+            ServerSend.Respawn(id);
         }
 
         public void TeleportToSpawn()

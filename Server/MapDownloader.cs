@@ -44,6 +44,7 @@ namespace ServerKMP
                 while(true)
                 {
                     HttpListenerContext ctx = listener.GetContext();
+                    Console.WriteLine("[MapDownloader] Request from " + ctx.Request.UserHostAddress);
                     HttpListenerResponse res = ctx.Response;
                     res.ContentLength64 = mapData.Length;
                     res.OutputStream.Write(mapData, 0, mapData.Length);

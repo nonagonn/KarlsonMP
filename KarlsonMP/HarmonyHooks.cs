@@ -35,7 +35,6 @@ namespace KarlsonMP
         }
 
         private static bool done = false;
-        public static GameObject bulletPrefab;
 
         private static void _scene(Scene scene, LoadSceneMode mode)
         {
@@ -80,7 +79,6 @@ namespace KarlsonMP
                         }
                     }
                 }
-                bulletPrefab = (from x in Resources.FindObjectsOfTypeAll<GameObject>() where x.name == "Bullet" select x).First();
 
                 GameObject.Find("Managers (1)/UI/Game/Timer").SetActive(false);
                 ClientSend.RequestScene();
@@ -154,63 +152,21 @@ namespace KarlsonMP
     {
         public static bool Prefix(bool ___fpsOn, bool ___speedOn, TextMeshProUGUI ___fps, ref float ___deltaTime)
         {
-            if (___fpsOn || ___fpsOn || PlaytimeLogic.showDebug)
+            if (___fpsOn || ___fpsOn)
             {
                 if (!___fps.gameObject.activeInHierarchy) ___fps.gameObject.SetActive(true);
                 ___deltaTime += (Time.unscaledDeltaTime - ___deltaTime) * 0.1f;
                 float num = ___deltaTime * 1000f;
                 float num2 = 1f / ___deltaTime;
                 string text = "";
-                if (___fpsOn) text += string.Format("{0:0.0} ms ({1:0.} fps)\n", num, num2);
+                if (___fpsOn) text += string.Format("{0:0.0} ms ({1:0.} fps)", num, num2);
+                if (___fpsOn && ___speedOn) text += " | ";
                 if (___speedOn) text += $"m/s: {string.Format("{0:F1}", PlayerMovement.Instance.rb.velocity.magnitude)}\n";
-                if (PlaytimeLogic.showDebug)
-                {
-                    text += $"\n[KarlsonMP Debug]\n" +
-                        $"RTT: {NetworkManager.client.SmoothRTT / 1000f}";
-                }
                 ___fps.text = text;
                 return false;
             }
             if (___fps.gameObject.activeInHierarchy) ___fps.gameObject.SetActive(false);
             return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(RangedWeapon), "SpawnProjectile")]
-    public class Hook_RangedWeapon_SpawnProjectile
-    {
-        public static bool Prefix()
-        {
-            Gun.Instance.Shoot();
-            AudioManager.Instance.PlayPitched("GunBass", 0.3f);
-            AudioManager.Instance.PlayPitched("GunHigh", 0.3f);
-            AudioManager.Instance.PlayPitched("GunLow", 0.3f);
-            /* atm i don't know more abt this.. will need to reverse this code a bit more
-            Vector3 vector = ___guntip.position - ___guntip.transform.right / 4f;
-            UnityEngine.Object.Instantiate(global::PrefabManager.Instance.muzzle, vector, Quaternion.identity);
-            */
-            // cast ray
-            Vector3 gunTip = PlayerMovement.Instance.transform.Find("Head").position;
-            // Player Collider, Ground, Object
-            LayerMask hittable = (1 << 12) | (1 << 9) | (1 << 10);
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.rotation * Vector3.forward, out RaycastHit hitInfo, 200f, hittable))
-            {
-                BulletRenderer.DrawBullet(gunTip, hitInfo.point, Color.blue);
-                ClientSend.Shoot(gunTip, hitInfo.point);
-                if(hitInfo.transform.gameObject.GetComponent<AnimController>() != null) {
-                    ClientSend.Kill(hitInfo.transform.gameObject.GetComponent<AnimController>().kmpid);
-                }
-            }
-            return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(PlayerMovement), "Start")]
-    public class Hook_PlayerMovement_Start
-    {
-        public static void Prefix(PlayerMovement __instance)
-        {
-            __instance.spawnWeapon = KMP_PrefabManager.NewPistol();
         }
     }
 

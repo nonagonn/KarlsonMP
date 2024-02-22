@@ -55,6 +55,11 @@ namespace KarlsonMP
         public const ushort killFeed = 5;
         public const ushort teleport = 6;
         public const ushort map = 7;
+        public const ushort hp = 8;
+        public const ushort kill = 9; // we killed someone
+        public const ushort death = 10; // we died
+        public const ushort respawn = 11; // server respawned us (teleport should come next)
+        public const ushort chat = 12;
     }
     public static class Packet_C2S
     {
@@ -62,7 +67,8 @@ namespace KarlsonMP
         public const ushort position = 2; // position
         public const ushort requestScene = 3; // request sync and initialPlayerList
         public const ushort shoot = 4; // client shoot
-        public const ushort kill = 5; // client killed someone
+        public const ushort damage = 5; // damage report after shoot
+        public const ushort chat = 6;
     }
 
     public class ClientSend
@@ -76,6 +82,7 @@ namespace KarlsonMP
 
         public static void PositionData()
         {
+            if (!ClientHandle.PlayerList) return;
             Message message = Message.Create(MessageSendMode.Unreliable, Packet_C2S.position);
             message
                 .Add(PlayerMovement.Instance.transform.position)
@@ -100,17 +107,26 @@ namespace KarlsonMP
             NetworkManager.client.Send(message);
         }
 
-        public static void Kill(ushort victim)
+        public static void Damage(ushort victim, int damage)
         {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.kill);
-            message.Add(victim);
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.damage);
+            message
+                .Add(victim)
+                .Add(damage);
+            NetworkManager.client.Send(message);
+        }
+
+        public static void ChatMessage(string msg)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.chat);
+            message.Add(msg);
             NetworkManager.client.Send(message);
         }
     }
 
     public class ClientHandle
     {
-        private static bool PlayerList = false;
+        public static bool PlayerList { get; private set; } = false;
 
         [MessageHandler(Packet_S2C.initialPlayerList)]
         public static void InitialPlayerList(Message message)
@@ -198,6 +214,9 @@ namespace KarlsonMP
         [MessageHandler(Packet_S2C.map)]
         public static void MapChange(Message message)
         {
+            // clear old player list
+            PlaytimeLogic.players.Clear();
+            PlayerList = false;
             bool isDefault = message.GetBool();
             string mapName = message.GetString();
             KillFeedGUI.AddText($"Loading map {mapName}");
@@ -210,6 +229,43 @@ namespace KarlsonMP
             int httpPort = message.GetInt();
             // download map from http server
             KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(Loader.address, httpPort));
+        }
+
+        [MessageHandler(Packet_S2C.hp)]
+        public static void SetHP(Message message)
+        {
+            int hp = message.GetInt();
+            if (hp < PlaytimeLogic.hp) KMP_AudioManager.PlaySound("hitself", 0.15f);
+            PlaytimeLogic.hp = hp;
+        }
+
+        [MessageHandler(Packet_S2C.kill)]
+        public static void ConfirmKill(Message message)
+        {
+            ushort victim = message.GetUShort();
+            KMP_AudioManager.PlaySound("kill", 0.05f);
+        }
+
+        [MessageHandler(Packet_S2C.death)]
+        public static void WeDied(Message message)
+        {
+            ushort killer = message.GetUShort();
+            // if killer = 0, natural cause
+            KMP_AudioManager.PlaySound("death", 0.05f);
+        }
+
+        [MessageHandler(Packet_S2C.respawn)]
+        public static void Respawn(Message message)
+        {
+            // reset guns ammo, because we got respawned
+            Inventory.ReloadAll();
+        }
+
+        [MessageHandler(Packet_S2C.chat)]
+        public static void Chat(Message message)
+        {
+            string msg = message.GetString();
+            PlaytimeLogic.AddChat(msg);
         }
     }
 }

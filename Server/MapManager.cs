@@ -9,7 +9,7 @@ namespace ServerKMP
 {
     public static class MapManager
     {
-        private static List<Map> defaultMaps = new List<Map>();
+        public static List<Map> defaultMaps = new List<Map>();
 
         public static void Init()
         {

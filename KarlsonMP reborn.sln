@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KarlsonMP", "KarlsonMP\Karl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{36C54C52-6B2A-4D08-B617-4CCBEE68F369}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MelonLoaderDummyLoader", "MelonLoaderDummyLoader\MelonLoaderDummyLoader.csproj", "{AD197C00-8369-4EA7-83CC-F57F698BC726}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,14 @@ Global
 		{36C54C52-6B2A-4D08-B617-4CCBEE68F369}.Release|Any CPU.Build.0 = Release|Any CPU
 		{36C54C52-6B2A-4D08-B617-4CCBEE68F369}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
 		{36C54C52-6B2A-4D08-B617-4CCBEE68F369}.Release|KarlsonMP.Build.0 = Release|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
+		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|KarlsonMP.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

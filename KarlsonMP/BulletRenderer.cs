@@ -27,15 +27,11 @@ namespace KarlsonMP
             lr.SetPositions(new Vector3[] { from, to });
             IEnumerator DestroyBr()
             {
-                yield return new WaitForSeconds(0.1f);
-                lr.widthMultiplier = 0.15f;
-                yield return new WaitForSeconds(0.1f);
-                lr.widthMultiplier = 0.10f;
-                yield return new WaitForSeconds(0.1f);
-                lr.widthMultiplier = 0.05f;
-                yield return new WaitForSeconds(0.1f);
-                lr.widthMultiplier = 0.0f;
-                yield return new WaitForSeconds(0.1f);
+                for(float m = 0.19f; m >= 0; m -= 0.01f)
+                {
+                    yield return new WaitForSeconds(0.02f);
+                    lr.widthMultiplier = m;
+                }
                 UnityEngine.Object.Destroy(br);
             }
             Loader.monoHooks.StartCoroutine(DestroyBr());

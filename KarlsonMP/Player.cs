@@ -9,7 +9,6 @@ namespace KarlsonMP
 {
     public class AnimController : MonoBehaviour
     {
-        public ushort kmpid;
         public Animator Animator = null;
 
         void Start()
@@ -33,11 +32,17 @@ namespace KarlsonMP
         }
     }
 
+    public class GameObjectToPlayerId : MonoBehaviour
+    {
+        public ushort id;
+    }
+
     public class Player
     {
         public int id;
         public string username;
         public GameObject player;
+        public GameObject playerCollider;
 
         private float collOldRot = 0;
 
@@ -49,7 +54,8 @@ namespace KarlsonMP
                 username = _username;
                 player = UnityEngine.Object.Instantiate(MonoHooks.playerPrefab);
                 player.name = username + " [prefab]";
-                player.AddComponent<AnimController>().kmpid = _id;
+                player.AddComponent<AnimController>();
+                player.AddComponent<GameObjectToPlayerId>().id = _id;
                 // give gun
                 Transform gunPosition = player.transform.Find("Armature/Hips.Control/Hips/Waist/Torso/LeftShoulderJoint/Shoulder.L/UpperArm.L/LowerArm.L/Hand.L/PistolPosition");
                 GameObject pistol = KMP_PrefabManager.NewPistol();
@@ -59,6 +65,14 @@ namespace KarlsonMP
                 pistol.transform.localPosition = new Vector3(1f, -.5f, 0f);
                 pistol.transform.localRotation = Quaternion.Euler(-60f, 0f, 0f);
                 pistol.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+                // add capsule collider
+                playerCollider = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                playerCollider.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                playerCollider.transform.localScale = new Vector3(1f, 1.5f, 1f);
+                playerCollider.layer = 8;
+                playerCollider.GetComponent<MeshRenderer>().enabled = false;
+                playerCollider.AddComponent<GameObjectToPlayerId>().id = _id;
             }
             catch (System.Exception e)
             {
@@ -69,6 +83,7 @@ namespace KarlsonMP
         public void Destroy()
         {
             UnityEngine.Object.Destroy(player);
+            UnityEngine.Object.Destroy(playerCollider);
         }
 
         private int stallMovement = 0;
@@ -101,6 +116,12 @@ namespace KarlsonMP
 
         public void Move(Vector3 basicPos, Vector2 rot)
         {
+            playerCollider.transform.position = basicPos;
+            if (crouch)
+                playerCollider.transform.localScale = new Vector3(1f, 0.5f, 1f);
+            else
+                playerCollider.transform.localScale = new Vector3(1f, 1.5f, 1f);
+
             if (!crouch)
                 basicPos += new Vector3(0, 1.2f, 0f);
             else

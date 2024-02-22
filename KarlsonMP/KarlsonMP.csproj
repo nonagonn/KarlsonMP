@@ -239,7 +239,9 @@
     <Compile Include="BulletRenderer.cs" />
     <Compile Include="ForcedCultureInfo.cs" />
     <Compile Include="HarmonyHooks.cs" />
+    <Compile Include="Inventory.cs" />
     <Compile Include="KillFeedGUI.cs" />
+    <Compile Include="KMP_Audio.cs" />
     <Compile Include="KMP_Console.cs" />
     <Compile Include="KMP_PrefabManager.cs" />
     <Compile Include="Loader.cs" />
@@ -248,9 +250,11 @@
     <Compile Include="MessageExtensions.cs" />
     <Compile Include="MonoHooks.cs" />
     <Compile Include="NetworkManager.cs" />
+    <Compile Include="ObjectExtensions.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="PlaytimeLogic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WeaponLib.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -24,6 +24,9 @@ namespace KarlsonMP
             // load prefab
             AssetBundle bundle = AssetBundle.LoadFromFile(Path.Combine(Directory.GetCurrentDirectory(), "KMP", "karlsonmp.bundle"));
             playerPrefab = (GameObject)bundle.LoadAsset("assets/karlsonmp/playerprefab.prefab");
+            Inventory.GuiCtor(bundle);
+            Inventory.LoadAssets(bundle);
+            KMP_AudioManager.Initialize(bundle);
         }
 
         public void FixedUpdate()
@@ -39,12 +42,14 @@ namespace KarlsonMP
         {
             Time.timeScale = 1f;
             PlaytimeLogic.Update();
+            Inventory.Update();
         }
 
         public void OnGUI()
         {
             KillFeedGUI._draw();
             PlaytimeLogic.OnGUI();
+            Inventory.OnGUI();
 
             if (dialogData.show)
             {

@@ -31,15 +31,6 @@ namespace KarlsonMP
 
         public static void Start()
         {
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "KarlsonMP.log")))
-                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), "KarlsonMP.log"));
-
-            Application.logMessageReceived += (a, b, c) =>
-            {
-                if (c != LogType.Log)
-                    KMP_Console.Log(a + " " + b);
-            };
-
             if (Environment.GetCommandLineArgs().Length < 3)
             {
                 MessageBox(IntPtr.Zero, "Invalid parameters", "KarlsonMP", 0);
@@ -47,9 +38,19 @@ namespace KarlsonMP
                 return;
             }
 
+            username = Environment.GetCommandLineArgs()[1];
+
             ForcedCultureInfo.Install();
 
-            username = Environment.GetCommandLineArgs()[1];
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP - {username}.log")))
+                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP - {username}.log"));
+
+            Application.logMessageReceived += (a, b, c) =>
+            {
+                if (c != LogType.Log)
+                    KMP_Console.Log(a + " " + b);
+            };
+
             string[] adr = Environment.GetCommandLineArgs()[2].Split(':');
             if (adr.Length == 1)
                 port = 11337;

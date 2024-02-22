@@ -43,6 +43,7 @@ namespace ServerKMP
         }
     }
 
+
     public static class Packet_S2C
     {
         public const ushort initialPlayerList = 1; // initial player list
@@ -52,6 +53,11 @@ namespace ServerKMP
         public const ushort killFeed = 5;
         public const ushort teleport = 6;
         public const ushort map = 7;
+        public const ushort hp = 8;
+        public const ushort kill = 9; // we killed someone
+        public const ushort death = 10; // we died
+        public const ushort respawn = 11; // server respawned us (teleport should come next)
+        public const ushort chat = 12;
     }
     public static class Packet_C2S
     {
@@ -59,7 +65,8 @@ namespace ServerKMP
         public const ushort position = 2; // position
         public const ushort requestScene = 3; // request sync and initialPlayerList
         public const ushort shoot = 4; // client shoot
-        public const ushort kill = 5; // client killed someone
+        public const ushort damage = 5; // damage report after shoot
+        public const ushort chat = 6;
     }
 
     public class ServerSend
@@ -127,11 +134,58 @@ namespace ServerKMP
             message.AddBool(MapManager.currentMap.isDefault);
             message.AddString(MapManager.currentMap.name);
             if (!MapManager.currentMap.isDefault)
-                message.AddInt(11338); // map downloader port
+                message.AddInt(Config.HTTP_PORT); // map downloader port
             return message;
         }
         public static void MapChange() => NetworkManager.server.SendToAll(MakeMapChangeMessage());
         public static void MapChange(ushort id) => NetworkManager.server.Send(MakeMapChangeMessage(), id);
+
+        public static void SetHP(ushort id, int hp)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.hp);
+            message.AddInt(hp);
+            NetworkManager.server.Send(message, id);
+        }
+
+        public static void BroadcastKill(ushort killer, ushort victim)
+        {
+            ConfirmKill(killer, victim);
+            Died(victim, killer);
+        }
+
+        public static void ConfirmKill(ushort killer, ushort victim)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.kill);
+            message.Add(victim);
+            NetworkManager.server.Send(message, killer);
+        }
+
+        public static void Died(ushort victim, ushort killer)
+        {
+            // if natural, killer = 0
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.death);
+            message.Add(killer);
+            NetworkManager.server.Send(message, victim);
+        }
+
+        public static void Respawn(ushort id)
+        {
+            // tell player we are going to respawn them
+            NetworkManager.server.Send(Message.Create(MessageSendMode.Reliable, Packet_S2C.respawn), id);
+        }
+
+        public static void ChatMessage(string msg)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.chat);
+            message.Add(msg);
+            NetworkManager.server.SendToAll(message);
+        }
+        public static void ChatMessage(string msg, ushort target)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.chat);
+            message.Add(msg);
+            NetworkManager.server.Send(message, target);
+        }
     }
 
     public class ServerHandle
@@ -177,12 +231,35 @@ namespace ServerKMP
             NetworkManager.server.SendToAll(broadcast, fromId);
         }
 
-        [MessageHandler(Packet_C2S.kill)]
-        public static void Kill(ushort from, Message message)
+        [MessageHandler(Packet_C2S.damage)]
+        public static void Damage(ushort from, Message message)
         {
             ushort who = message.GetUShort();
-            ServerSend.KillFeed(from, who);
-            NetworkManager.clients[from].TeleportToSpawn();
+            if (NetworkManager.clients[who].invicibleUntil > DateTime.Now) return; // player is invincible
+            int damage = message.GetInt();
+            NetworkManager.clients[who].hp -= damage;
+            if(NetworkManager.clients[who].hp <= 0)
+            {
+                ServerSend.KillFeed(from, who);
+                ServerSend.BroadcastKill(from, who);
+                NetworkManager.clients[who].MarkRespawn();
+                NetworkManager.clients[who].TeleportToSpawn();
+                NetworkManager.clients[who].hp = 100;
+                ServerSend.SetHP(who, 100);
+            }
+            else
+            {
+                ServerSend.SetHP(who, NetworkManager.clients[who].hp);
+            }
+        }
+
+        [MessageHandler(Packet_C2S.chat)]
+        public static void Chat(ushort from, Message message)
+        {
+            string msg = message.GetString();
+            msg = msg.Replace("<", "<<i></i>"); // sanitize against unwanted richtext
+            ServerSend.ChatMessage($"{NetworkManager.clients[from].username} : {msg}");
+            Console.WriteLine($"[CHAT] {NetworkManager.clients[from].username} : {msg}");
         }
     }
 }
