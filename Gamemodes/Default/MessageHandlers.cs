@@ -17,19 +17,22 @@ namespace Default
             GamemodeEntry.players.Add(handshake.fromId, new Player(handshake.fromId, handshake.username));
 
             // send playerjoin to all except client
-            new MessageServerToClient.MessagePlayerJoinLeave(handshake.fromId).SendToAll(handshake.fromId);
+            new MessageServerToClient.MessagePlayerJoinLeave(handshake.fromId, handshake.username).SendToAll(handshake.fromId);
             // send player current map
             if (MapManager.currentMap.isDefault) // default map, just send scene name
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).Send(handshake.fromId);
             else // here we need to use the pre-implemented http server
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).Send(handshake.fromId);
+
+            // update scoreboard
+            GamemodeEntry.UpdateScoreboard();
         }
 
         public static void PositionData(MessageClientToServer.MessageBase_C2S _base)
             => PositionData((MessageClientToServer.MessagePositionData)_base);
         public static void PositionData(MessageClientToServer.MessagePositionData positionData)
         {
-            if (GamemodeEntry.players[positionData.fromId].spectating) return; // player is spectating, ignore their position
+            if (GamemodeEntry.players[positionData.fromId].spectating != 0) return; // player is spectating, ignore their position
             // broadcast position to all except client
             new MessageServerToClient.MessagePositionData(positionData).SendToAll(positionData.fromId);
             // here we use the constructor i conviniently created to transfer all fields from client message to server message
@@ -69,14 +72,19 @@ namespace Default
                 }
                 GamemodeEntry.players[damage.victim].deaths++;
                 GamemodeEntry.players[damage.victim].score -= 50;
-                new MessageServerToClient.MessageUpdateScoreboard(GamemodeEntry.players.Select(x => (x.Key, x.Value.username, x.Value.kills, x.Value.deaths, x.Value.score)).ToList()).SendToAll();
+                GamemodeEntry.UpdateScoreboard();
                 string kfMessage = $"{GamemodeEntry.players[damage.fromId].username} killed {GamemodeEntry.players[damage.victim].username}";
                 if (damage.fromId == damage.victim)
                     kfMessage = $"{GamemodeEntry.players[damage.fromId].username} commited suicide";
                 new MessageServerToClient.MessageKillFeed(kfMessage).SendToAll();
                 new MessageServerToClient.MessageConfirmKill(damage.victim).Send(damage.fromId);
                 new MessageServerToClient.MessageDied(damage.fromId).Send(damage.victim);
-                GamemodeEntry.players[damage.victim].EnterSpectate(damage.fromId);
+                ushort targetSpec = damage.fromId;
+                if (GamemodeEntry.players[damage.fromId].spectating != 0)
+                    // race condition, ping things
+                    // the player that killed us is dead, so we spactate in-place
+                    targetSpec = damage.victim;
+                GamemodeEntry.players[damage.victim].EnterSpectate(targetSpec);
                 GamemodeEntry.players[damage.victim].respawnTaskId = KMP_TaskScheduler.Schedule(() =>
                 {
                     GamemodeEntry.players[damage.victim].ExitSpectate();
@@ -84,6 +92,12 @@ namespace Default
                     GamemodeEntry.players[damage.victim].respawnTaskActive = false;
                 }, DateTime.Now.AddSeconds(5));
                 GamemodeEntry.players[damage.victim].respawnTaskActive = true;
+
+                // check if there are any other people that were previously spectating our victim
+                foreach(var x in GamemodeEntry.players)
+                    if(x.Value.spectating == damage.victim)
+                        x.Value.EnterSpectate(targetSpec == damage.victim ? x.Key : damage.fromId); // enter target spec (same story)
+                // here we don't need to worry about setting timer, because the respawnTask is still active, hence we're spectating
             }
         }
 

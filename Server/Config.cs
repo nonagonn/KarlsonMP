@@ -12,7 +12,7 @@ namespace ServerKMP
         public static void LoadConfig()
         {
             if (!File.Exists("config"))
-                File.WriteAllText("config", "#port to be used by Riptide\nport=11337\n\n#port to be used by MapDownloader\n#MapDownloader allows users to download maps from the server\n#if you don't know if you should change this, don't\nhttp_port=11338\n");
+                File.WriteAllText("config", "#port to be used by Riptide\nport=11337\n\n#port to be used by MapDownloader\n#MapDownloader allows users to download maps from the server\n#if you don't know if you should change this, don't\nhttp_port=11338\n\n#startup gamemode\ngamemode=Default");
             string[] lines = File.ReadAllLines("config");
             foreach (var line in lines)
             {
@@ -29,6 +29,9 @@ namespace ServerKMP
                     case "http_port":
                         HTTP_PORT = ushort.Parse(split[1].Trim());
                         break;
+                    case "gamemode":
+                        GAMEMODE = split[1].Trim();
+                        break;
                     default:
                         Console.WriteLine($"[ERROR] Found unknown key in config '{split[0]}'");
                         Console.WriteLine($"[ERROR] Line: '{line}'");
@@ -42,5 +45,6 @@ namespace ServerKMP
         public static int MSPT => 1000 / TPS;
         public static ushort PORT { get; private set; } = 11337;
         public static ushort HTTP_PORT { get; private set; } = 11338;
+        public static string GAMEMODE { get; private set; } = "Default";
     }
 }

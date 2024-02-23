@@ -10,3 +10,6 @@ ServerTick() - ran by server update loop at TPS
 there's also message builder and you can build and send out riptide messages. good luck!
 
 also you can use taskscheduler because i've already made one so you don't have to re-invent the wheel bozo
+
+ok, but like seriousely, if you want to make a gamemode, don't start from scratch. (i've made a base for you already)
+build on top of the default

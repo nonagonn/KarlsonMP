@@ -1,7 +1,11 @@
 lib
 */bin
 */obj
+*/*/bin
+*/*/obj
 .vs
 build
 packages
 ServerNET_CORE
+
+Gamemodes/Default/obj/Release/Default.csproj.AssemblyReference.cache

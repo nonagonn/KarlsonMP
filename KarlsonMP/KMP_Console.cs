@@ -20,6 +20,7 @@ namespace KarlsonMP
 
         public static string Content => content;
         private static string content = "KarlsonMP reborn\n    made by devilExE\n    licensed under MIT License\n    karlsonmodding/KarlsonMP @ github.com\n\n";
+        public static void ClearScreen() => content = "";
 
         public static Dictionary<string, Action<string[]>> commands = new Dictionary<string, Action<string[]>>();
         public static void _processCommand(string commandString)

@@ -42,15 +42,19 @@ namespace ServerKMP
             // start networking
             NetworkManager.Start();
 
+            // load gamemode
+            GamemodeManager.Init();
+
             DateTime _nextLoop = DateTime.Now;
             while(serverRunning)
             {
                 while(_nextLoop < DateTime.Now)
                 {
                     Update();
+                    GamemodeManager.SafeCall(GamemodeManager.currentGamemode.ServerTick);
 
                     // run scheduled tasks
-                    foreach(var x in KMP_TaskScheduler.scheduledTasks)
+                    foreach (var x in KMP_TaskScheduler.scheduledTasks)
                     {
                         if (x.Time < DateTime.Now)
                         {
@@ -67,6 +71,7 @@ namespace ServerKMP
             }
 
             Console.WriteLine("Shutting down Main Thread");
+            GamemodeManager.SafeCall(GamemodeManager.currentGamemode.OnStop);
 
             // shutdown server
             NetworkManager.Exit();

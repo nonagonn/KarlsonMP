@@ -148,7 +148,7 @@ namespace ServerKMP.GamemodeApi
             /// </summary>
             /// <param name="id">Player ID</param>
             /// <param name="username">Player Username</param>
-            public MessagePlayerJoinLeave(ushort id, ushort username)
+            public MessagePlayerJoinLeave(ushort id, string username)
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.addPlayer);
                 RiptideMessage.Add(true).Add(id).Add(username);
@@ -165,11 +165,11 @@ namespace ServerKMP.GamemodeApi
         }
         public class MessagePositionData : MessageBase_S2C
         {
-            public MessagePositionData(MessageClientToServer.MessagePositionData clientMessage) : this(clientMessage.position, clientMessage.rotation, clientMessage.crouching, clientMessage.moving, clientMessage.grounded) { }
-            public MessagePositionData(Vector3 position, Vector2 rotation, bool crouching, bool moving, bool grounded)
+            public MessagePositionData(MessageClientToServer.MessagePositionData clientMessage) : this(clientMessage.fromId, clientMessage.position, clientMessage.rotation, clientMessage.crouching, clientMessage.moving, clientMessage.grounded) { }
+            public MessagePositionData(ushort pid, Vector3 position, Vector2 rotation, bool crouching, bool moving, bool grounded)
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.playerData);
-                RiptideMessage.Add(position).Add(rotation).Add(crouching).Add(moving).Add(grounded);
+                RiptideMessage.Add(pid).Add(position).Add(rotation).Add(crouching).Add(moving).Add(grounded);
             }
         }
         public class MessageSendBullet : MessageBase_S2C

@@ -81,8 +81,15 @@ namespace KarlsonMP
                 if (xRotation > 180f) xRotation -= 360f;
                 xRotation = Mathf.Clamp(xRotation, -90f, 90f);
                 playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0f);
-                var player = (from x in PlaytimeLogic.players where x.id == spectatingId select x).First();
-                PlayerMovement.Instance.transform.position = player.player.transform.position - playerCam.transform.forward * 10f;
+                if(spectatingId != NetworkManager.client.Id)
+                {
+                    var player = (from x in PlaytimeLogic.players where x.id == spectatingId select x).First();
+                    PlayerMovement.Instance.transform.position = player.player.transform.position - playerCam.transform.forward * 10f;
+                }
+                else
+                {
+                    PlayerMovement.Instance.rb.velocity = Vector3.zero;
+                }
             }
 
             if (Input.GetButtonDown("Cancel"))

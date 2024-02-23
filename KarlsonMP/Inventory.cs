@@ -130,7 +130,7 @@ namespace KarlsonMP
             CurrentWeapon = 0;
             WeaponObjects = new GameObject[3];
             WeaponObjects[0] = WeaponLib.MakeGun(ak47.GetComponent<MeshFilter>().mesh, ak47.GetComponent<MeshRenderer>().materials, new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), 0.2f, 0.15f);
-            WeaponObjects[1] = WeaponLib.MakeGun(deagle.GetComponent<MeshFilter>().mesh, deagle.GetComponent<MeshRenderer>().materials, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -1.3f, 0f), 0.3f, 0.4f);
+            WeaponObjects[1] = WeaponLib.MakeGun(deagle.GetComponent<MeshFilter>().mesh, deagle.GetComponent<MeshRenderer>().materials, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), 0.3f, 0.4f);
             WeaponObjects[1].SetActive(false);
             WeaponObjects[2] = WeaponLib.MakeGun(shotgun.GetComponent<MeshFilter>().mesh, shotgun.GetComponent<MeshRenderer>().materials, new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, 0.5f, 1f);
             WeaponObjects[2].SetActive(false);

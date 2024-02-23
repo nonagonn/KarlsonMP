@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using ServerKMP.GamemodeApi;
 
 namespace ServerKMP
 {
@@ -14,7 +15,6 @@ namespace ServerKMP
     {
         public static Server server;
         public static int CurrentTick { get; private set; } = 0;
-        public static Dictionary<int, Player> clients = new Dictionary<int, Player>();
 
         public static void Start()
         {
@@ -27,9 +27,7 @@ namespace ServerKMP
 
         private static void Server_ClientDisconnected(object sender, ServerDisconnectedEventArgs e)
         {
-            clients[e.Client.Id].Destroy();
-            clients.Remove(e.Client.Id);
-            ServerSend.PlayerLeave(e.Client.Id);
+            GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.OnPlayerDisconnect(e.Client.Id));
         }
 
         public static void Update()
@@ -72,251 +70,25 @@ namespace ServerKMP
         public const ushort chat = 6;
     }
 
-    public class ServerSend
-    {
-        public static void InitialPlayerList(ushort _id)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.initialPlayerList);
-            message.Add(NetworkManager.clients.Count - 1);
-            foreach (var c in NetworkManager.clients.Values)
-            {
-                if (c.id == _id) continue; // skip self
-                message.Add(c.id);
-                message.Add(c.username);
-            }
-            NetworkManager.server.Send(message, _id);
-        }
-
-        public static void PlayerJoin(ushort _id)
-        {
-            ServerSend.UpdateScoreboard();
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.addPlayer);
-            message
-                .Add(true)
-                .Add(_id)
-                .Add(NetworkManager.clients[_id].username);
-            NetworkManager.server.SendToAll(message, _id);
-        }
-        public static void PlayerLeave(ushort _id)
-        {
-            ServerSend.UpdateScoreboard();
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.addPlayer);
-            message
-                .Add(false)
-                .Add(_id);
-            NetworkManager.server.SendToAll(message);
-        }
-
-        public static void SendBullet(Vector3 from, Vector3 to, ushort original)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.bullet);
-            message
-                .Add(from)
-                .Add(to)
-                .Add(new Vector3(1f, 0f, 0f)); // red bullet
-            NetworkManager.server.SendToAll(message, original);
-        }
-
-        public static void KillFeed(int killer, int victim)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.killFeed);
-            if(killer == victim)
-                message.Add($"{NetworkManager.clients[killer].username} commited suicide");
-            else
-                message.Add($"{NetworkManager.clients[killer].username} killed {NetworkManager.clients[victim].username}");
-            NetworkManager.server.SendToAll(message);
-        }
-
-        public static void Teleport(ushort id, MessageExtensions.oVector3 pos, MessageExtensions.oVector2 rot, MessageExtensions.oVector3 vel)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.teleport);
-            message.Add(pos);
-            message.Add(rot);
-            message.Add(vel);
-            NetworkManager.server.Send(message, id);
-        }
-
-        private static Message MakeMapChangeMessage()
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.map);
-            message.AddBool(MapManager.currentMap.isDefault);
-            message.AddString(MapManager.currentMap.name);
-            if (!MapManager.currentMap.isDefault)
-                message.AddInt(Config.HTTP_PORT); // map downloader port
-            return message;
-        }
-        public static void MapChange() => NetworkManager.server.SendToAll(MakeMapChangeMessage());
-        public static void MapChange(ushort id) => NetworkManager.server.Send(MakeMapChangeMessage(), id);
-
-        public static void SetHP(ushort id, int hp)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.hp);
-            message.AddInt(hp);
-            NetworkManager.server.Send(message, id);
-        }
-
-        public static void BroadcastKill(ushort killer, ushort victim)
-        {
-            ConfirmKill(killer, victim);
-            Died(victim, killer);
-        }
-
-        public static void ConfirmKill(ushort killer, ushort victim)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.kill);
-            message.Add(victim);
-            NetworkManager.server.Send(message, killer);
-        }
-
-        public static void Died(ushort victim, ushort killer)
-        {
-            // if natural, killer = 0
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.death);
-            message.Add(killer);
-            NetworkManager.server.Send(message, victim);
-        }
-
-        public static void Respawn(ushort id, Vector3 pos)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.respawn);
-            message.Add(pos);
-            NetworkManager.server.Send(message, id);
-        }
-
-        public static void ChatMessage(string msg)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.chat);
-            message.Add(msg);
-            NetworkManager.server.SendToAll(message);
-        }
-        public static void ChatMessage(string msg, ushort target)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.chat);
-            message.Add(msg);
-            NetworkManager.server.Send(message, target);
-        }
-
-        public static void UpdateScoreboard()
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.scoreboard);
-            message.Add(NetworkManager.clients.Count);
-            foreach(var client in NetworkManager.clients.Values)
-            {
-                message.Add(client.id);
-                message.Add(client.username);
-                message.Add(client.kills);
-                message.Add(client.deaths);
-                message.Add(client.score);
-            }
-            NetworkManager.server.SendToAll(message);
-        }
-
-        public static void ColorPlayer(ushort who, string color)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.colorPlayer);
-            message.Add(who);
-            message.Add(color);
-            NetworkManager.server.SendToAll(message, who);
-        }
-
-        public static void Spectate(ushort spectator, ushort player)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.spectate);
-            message.Add(true);
-            message.Add(player);
-            NetworkManager.server.Send(message, spectator);
-        }
-        public static void SpectateEnd(ushort spectator)
-        {
-            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.spectate);
-            message.Add(false);
-            NetworkManager.server.Send(message, spectator);
-        }
-    }
-
     public class ServerHandle
     {
         [MessageHandler(Packet_C2S.handshake)]
         public static void Handshake(ushort from, Message message)
-        {
-            string _username = message.GetString();
-            NetworkManager.clients.Add(from, new Player(from));
-            NetworkManager.clients[from].SetUsername(_username);
-            ServerSend.PlayerJoin(from);
-            ServerSend.MapChange(from);
-        }
-
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessageHandshake(from, message)));
         [MessageHandler(Packet_C2S.position)]
-        public static void KeyboardState(ushort from, Message message)
-        {
-            if (NetworkManager.clients[from].spectating) return; // player is spectating, ignore their position
-            Message broadcast = Message.Create(MessageSendMode.Unreliable, Packet_S2C.playerData);
-            broadcast.Add(from);
-            broadcast.Add(message.GetVector3());
-            broadcast.Add(message.GetVector2());
-            broadcast.Add(message.GetBool());
-            broadcast.Add(message.GetBool());
-            broadcast.Add(message.GetBool());
-            NetworkManager.server.SendToAll(broadcast, from);
-        }
-
+        public static void PositionData(ushort from, Message message)
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessagePositionData(from, message)));
         [MessageHandler(Packet_C2S.requestScene)]
-        public static void RequestScene(ushort from, Message _)
-        {
-            ServerSend.InitialPlayerList(from);
-            NetworkManager.clients[from].TeleportToSpawn();
-        }
-
+        public static void RequestScene(ushort from, Message message)
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessageRequestScene(from, message)));
         [MessageHandler(Packet_C2S.shoot)]
-        public static void Shoot(ushort fromId, Message message)
-        {
-            Vector3 from = message.GetVector3();
-            Vector3 to = message.GetVector3();
-            ServerSend.SendBullet(from, to, fromId);
-        }
-
+        public static void Shoot(ushort from, Message message)
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessageShoot(from, message)));
         [MessageHandler(Packet_C2S.damage)]
         public static void Damage(ushort from, Message message)
-        {
-            ushort who = message.GetUShort();
-            if (NetworkManager.clients[who].invicibleUntil > DateTime.Now) return; // player is invincible
-            int damage = message.GetInt();
-            NetworkManager.clients[who].hp -= damage;
-            if(NetworkManager.clients[who].hp <= 0)
-            {
-                if (from != who) // if not suicide
-                {
-                    NetworkManager.clients[from].kills++;
-                    NetworkManager.clients[from].score += 100;
-                }
-                NetworkManager.clients[who].score -= 50;
-                NetworkManager.clients[who].deaths++;
-                ServerSend.UpdateScoreboard();
-                ServerSend.KillFeed(from, who);
-                ServerSend.BroadcastKill(from, who);
-                if (from != who)
-                    NetworkManager.clients[who].EnterSpectate(from);
-                NetworkManager.clients[who].respawnTaskId = Program.ScheduledTask.Schedule(() =>
-                {
-                    NetworkManager.clients[who].ExitSpectate();
-                    NetworkManager.clients[who].RespawnPlayer();
-                    NetworkManager.clients[who].respawnTaskActive = false;
-                }, DateTime.Now.AddSeconds(5));
-                NetworkManager.clients[who].respawnTaskActive = true;
-            }
-            else
-            {
-                ServerSend.SetHP(who, NetworkManager.clients[who].hp);
-            }
-        }
-
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessageDamage(from, message)));
         [MessageHandler(Packet_C2S.chat)]
         public static void Chat(ushort from, Message message)
-        {
-            string msg = message.GetString();
-            msg = msg.Replace("<", "<<i></i>"); // sanitize against unwanted richtext
-            ServerSend.ChatMessage($"{NetworkManager.clients[from].username} : {msg}");
-            Console.WriteLine($"[CHAT] {NetworkManager.clients[from].username} : {msg}");
-        }
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode.ProcessMessage(new MessageClientToServer.MessageChat(from, message)));
     }
 }

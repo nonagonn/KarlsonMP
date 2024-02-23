@@ -52,7 +52,7 @@ namespace ServerKMP
                     MapDownloader.mapData = File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Maps", mapName + ".kme_raw"));
                 }
             }
-            ServerSend.MapChange();
+            GamemodeManager.SafeCall(GamemodeManager.currentGamemode.OnMapChange);
         }
 
         public class Map

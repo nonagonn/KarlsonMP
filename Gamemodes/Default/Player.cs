@@ -15,7 +15,7 @@ namespace Default
         public int hp;
         public int kills, deaths, score;
         public DateTime invicibleUntil;
-        public bool spectating;
+        public int spectating = 0;
         public uint respawnTaskId;
         public bool respawnTaskActive;
 
@@ -28,7 +28,7 @@ namespace Default
             deaths = 0;
             score = 0;
             invicibleUntil = DateTime.Now;
-            spectating = false;
+            spectating = 0;
             respawnTaskActive = false;
         }
 
@@ -65,15 +65,15 @@ namespace Default
         public void EnterSpectate(ushort target)
         {
             new MessageServerToClient.MessageSpectate(target).Send(id);
-            spectating = true;
+            spectating = target;
 
             // send fake position
-            new MessageServerToClient.MessagePositionData(new Vector3(30000f, 30000f, 30000f), Vector2.zero, false, false, false).SendToAll(id);
+            new MessageServerToClient.MessagePositionData(id, new Vector3(30000f, 30000f, 30000f), Vector2.zero, false, false, false).SendToAll(id);
         }
         public void ExitSpectate()
         {
             new MessageServerToClient.MessageSpectate().Send(id);
-            spectating = false;
+            spectating = 0;
         }
 
         public void Destroy()

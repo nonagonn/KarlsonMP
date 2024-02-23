@@ -85,7 +85,6 @@ namespace KarlsonMP
             UnityEngine.Object.Destroy(playerCollider);
         }
 
-        private int stallMovement = 0;
         private bool crouch, moving, grounded;
         private float animation_rotX, coll_oldRotX = 0f;
         private int animFix = 0;

@@ -95,6 +95,10 @@ namespace KarlsonMP
                     GameState.Instance.SetFov(val);
                 }
             });
+            KMP_Console.commands.Add("clear", (args) =>
+            {
+                KMP_Console.ClearScreen();
+            });
             KMP_Console.commands.Add("cmds", (args) =>
             {
                 KMP_Console.Log("List of commands:", true);

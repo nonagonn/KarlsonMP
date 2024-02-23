@@ -48,11 +48,14 @@
   <ItemGroup>
     <Compile Include="CommandManager.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="GamemodeApi\Gamemode.cs" />
+    <Compile Include="GamemodeApi\MessageBuilder.cs" />
+    <Compile Include="GamemodeApi\TaskScheduler.cs" />
+    <Compile Include="GamemodeManager.cs" />
     <Compile Include="MapDownloader.cs" />
     <Compile Include="MapManager.cs" />
     <Compile Include="MessageExtensions.cs" />
     <Compile Include="NetworkManager.cs" />
-    <Compile Include="Player.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UnityExtensions.cs" />

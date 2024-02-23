@@ -13,5 +13,6 @@ namespace ServerKMP.GamemodeApi
         public virtual void OnStart() { }
         public virtual void OnStop() { }
         public virtual void ServerTick() { }
+        public virtual void OnMapChange() { }
     }
 }
