@@ -58,8 +58,11 @@ namespace KarlsonMP
         public const ushort hp = 8;
         public const ushort kill = 9; // we killed someone
         public const ushort death = 10; // we died
-        public const ushort respawn = 11; // server respawned us (teleport should come next)
+        public const ushort respawn = 11; // server respawned us (teleport should come before/after)
         public const ushort chat = 12;
+        public const ushort scoreboard = 13;
+        public const ushort colorPlayer = 14; // color: 'yellow', 'red', 'blue'
+        public const ushort spectate = 15; // spectate player / exit spectate
     }
     public static class Packet_C2S
     {
@@ -184,7 +187,9 @@ namespace KarlsonMP
         {
             Vector3 from = message.GetVector3();
             Vector3 to = message.GetVector3();
-            BulletRenderer.DrawBullet(from, to, Color.red);
+            var c = message.GetVector3();
+            Color color = new Color(c.x, c.y, c.z);
+            BulletRenderer.DrawBullet(from, to, color);
         }
 
         [MessageHandler(Packet_S2C.killFeed)]
@@ -252,13 +257,19 @@ namespace KarlsonMP
             ushort killer = message.GetUShort();
             // if killer = 0, natural cause
             KMP_AudioManager.PlaySound("death", 0.05f);
+            PlayerMovement.Instance.ReflectionSet("dead", true);
         }
 
         [MessageHandler(Packet_S2C.respawn)]
         public static void Respawn(Message message)
         {
+            if (PlaytimeLogic.spectatingId != 0)
+                PlaytimeLogic.ExitSpectate();
+            PlayerMovement.Instance.ReflectionSet("dead", false);
             // reset guns ammo, because we got respawned
             Inventory.ReloadAll();
+            Vector3 position = message.GetVector3();
+            PlayerMovement.Instance.transform.position = position;
         }
 
         [MessageHandler(Packet_S2C.chat)]
@@ -266,6 +277,47 @@ namespace KarlsonMP
         {
             string msg = message.GetString();
             PlaytimeLogic.AddChat(msg);
+        }
+
+        [MessageHandler(Packet_S2C.scoreboard)]
+        public static void ScoreboardUpdate(Message message)
+        {
+            Scoreboard.UpdateScoreboard(message);
+        }
+
+        [MessageHandler(Packet_S2C.colorPlayer)]
+        public static void ColorPlayer(Message message)
+        {
+            ushort who = message.GetUShort();
+            if (who == NetworkManager.client.Id) return;
+            string color = message.GetString();
+            Texture2D tex;
+            switch(color)
+            {
+                case "yellow":
+                    tex = KME_LevelPlayer.gameTex[5];
+                    break;
+                case "blue":
+                    tex = KME_LevelPlayer.gameTex[7];
+                    break;
+                case "red":
+                    tex = KME_LevelPlayer.gameTex[9];
+                    break;
+                default:
+                    return;
+            }
+            Player p = (from x in PlaytimeLogic.players where x.id == who select x).First();
+            p.player.transform.GetChild(1).GetComponent<SkinnedMeshRenderer>().material.mainTexture = tex;
+        }
+
+        [MessageHandler(Packet_S2C.spectate)]
+        public static void Spectate(Message message)
+        {
+            bool enterSpec = message.GetBool();
+            if (!enterSpec)
+                PlaytimeLogic.ExitSpectate();
+            else
+                PlaytimeLogic.StartSpectate(message.GetUShort());
         }
     }
 }

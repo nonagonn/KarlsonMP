@@ -15,7 +15,7 @@ namespace KarlsonMP
 {
     public static class KME_LevelPlayer
     {
-        private static Texture2D[] gameTex = null;
+        public static Texture2D[] gameTex { get; private set; } = null;
 
         public static void InitGameTex()
         {

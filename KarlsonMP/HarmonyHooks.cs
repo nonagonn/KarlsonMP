@@ -200,6 +200,15 @@ namespace KarlsonMP
     {
         public static bool Prefix() => !PlaytimeLogic.paused;
     }
+    [HarmonyPatch(typeof(PlayerMovement), "KillPlayer")]
+    public class Hook_PlayerMovement_KillPlayer
+    {
+        public static bool Prefix()
+        {
+            ClientSend.Damage(NetworkManager.client.Id, 100); // suicide
+            return false;
+        }
+    }
     /*
     [HarmonyPatch(typeof(PlayerMovement), "FixedUpdate")]
     public class Hook_PlayerMovement_FixedUpdate

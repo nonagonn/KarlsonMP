@@ -35,6 +35,17 @@ namespace ServerKMP
                     if(x.EndsWith(".kme_raw") && File.Exists(x.Replace(".kme_raw", ".kme_data")))
                         Console.WriteLine(Path.GetFileNameWithoutExtension(x));
             });
+            commands.Add("list", (_) =>
+            {
+                Console.WriteLine($"{NetworkManager.clients.Count} Online Players:");
+                foreach(var x in NetworkManager.clients)
+                    Console.WriteLine($"({x.Key}) {x.Value.username}");
+            });
+            commands.Add("gamemode", (args) =>
+            {
+                if (args.Length != 2) Console.WriteLine("gamemode [mode] - change gamemode to [mode]");
+                else Console.WriteLine("changing gamemode to " + args[1]);
+            });
 
             commands.Add("cmds", (_) =>
             {

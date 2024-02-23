@@ -14,7 +14,13 @@ namespace KarlsonMP
             feed.Add(text);
         }
 
+        public static void DamageReport(string text)
+        {
+            damageReport.Add(text);
+        }
+
         private static readonly List<_feedItem> feed = new List<_feedItem>();
+        private static readonly List<_feedItem> damageReport = new List<_feedItem>();
 
         private static bool init = false;
         private static GUIStyle center;
@@ -27,6 +33,7 @@ namespace KarlsonMP
                 center = new GUIStyle();
                 center.alignment = TextAnchor.MiddleCenter;
                 center.normal.textColor = Color.white;
+                center.font = MonoHooks.arialFont;
             }
             int offY = 0;
             foreach (var item in feed)
@@ -37,6 +44,14 @@ namespace KarlsonMP
                 GUI.Box(new Rect(Screen.width - 205, 5 + offY, 200, 40), "");
                 GUI.Label(new Rect(Screen.width - 205, 5 + offY, 200, 40), item.text, center);
                 offY += 45;
+            }
+            offY = 0;
+            foreach (var item in damageReport)
+            {
+                if (item.state > 50) SetGUIOpacity((70 - item.state) / 20f);
+                else SetGUIOpacity(1f);
+                GUI.Label(new Rect(Screen.width / 2 + 10f, Screen.height / 2 + offY, 100f, 45f), "<size=25>" + item.text + "</size>", MonoHooks.defaultLabel);
+                offY += 30;
             }
             SetGUIOpacity(1f);
         }
@@ -50,6 +65,15 @@ namespace KarlsonMP
                 if (feed[i].state == 150)
                 {
                     feed.RemoveAt(i);
+                    i--;
+                }
+            }
+            for (int i = 0; i < damageReport.Count; i++)
+            {
+                damageReport[i].state++;
+                if (damageReport[i].state == 70)
+                {
+                    damageReport.RemoveAt(i);
                     i--;
                 }
             }

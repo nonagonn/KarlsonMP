@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ServerKMP.GamemodeApi;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,8 @@ namespace ServerKMP
 {
     internal class Program
     {
+        
+
         static Thread mainThread;
         static bool serverRunning = true;
         public static bool IsServerRunning => serverRunning;
@@ -45,8 +48,19 @@ namespace ServerKMP
                 while(_nextLoop < DateTime.Now)
                 {
                     Update();
-                    _nextLoop = _nextLoop.AddMilliseconds(Config.MSPT);
 
+                    // run scheduled tasks
+                    foreach(var x in KMP_TaskScheduler.scheduledTasks)
+                    {
+                        if (x.Time < DateTime.Now)
+                        {
+                            x.Task();
+                            x.ran = true;
+                        }
+                    }
+                    KMP_TaskScheduler.scheduledTasks.RemoveAll(x => x.ran);
+
+                    _nextLoop = _nextLoop.AddMilliseconds(Config.MSPT);
                     if(_nextLoop > DateTime.Now)
                         Thread.Sleep(_nextLoop - DateTime.Now); // don't overload server
                 }

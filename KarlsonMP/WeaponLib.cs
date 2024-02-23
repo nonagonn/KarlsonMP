@@ -11,7 +11,7 @@ namespace KarlsonMP
     public static class WeaponLib
     {
         //new Vector3(1.44f, 0.527f, 1.44f)
-        public static GameObject MakeGun(Mesh mesh, Material[] materials, Vector3 localScale, Vector3 gunTip, Vector3 meshRotation, Vector3 meshOffsetAfterRotation, float recoil, float attackSpeed)
+        public static GameObject MakeGun(Mesh mesh, Material[] materials, Vector3 localScale, Vector3 meshRotation, Vector3 gunTip, float recoil, float attackSpeed)
         {
             GameObject pistol = KMP_PrefabManager.NewPistol();
             pistol.GetComponent<MeshFilter>().mesh = mesh;
@@ -30,9 +30,10 @@ namespace KarlsonMP
             Vector3[] vert = new Vector3[msh.vertexCount];
             Array.Copy(msh.vertices, vert, vert.Length);
             for (int i = 0; i < vert.Length; i++)
-                vert[i] = quat * vert[i] + meshOffsetAfterRotation;
+                vert[i] = quat * vert[i];
             msh.vertices = vert;
             msh.UploadMeshData(true); // free up system memory
+
             return pistol;
         }
     }

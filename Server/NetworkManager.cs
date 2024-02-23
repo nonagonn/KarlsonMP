@@ -58,6 +58,9 @@ namespace ServerKMP
         public const ushort death = 10; // we died
         public const ushort respawn = 11; // server respawned us (teleport should come next)
         public const ushort chat = 12;
+        public const ushort scoreboard = 13;
+        public const ushort colorPlayer = 14; // color: 'yellow', 'red', 'blue'
+        public const ushort spectate = 15; // spectate player / exit spectate
     }
     public static class Packet_C2S
     {
@@ -86,6 +89,7 @@ namespace ServerKMP
 
         public static void PlayerJoin(ushort _id)
         {
+            ServerSend.UpdateScoreboard();
             Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.addPlayer);
             message
                 .Add(true)
@@ -95,7 +99,7 @@ namespace ServerKMP
         }
         public static void PlayerLeave(ushort _id)
         {
-
+            ServerSend.UpdateScoreboard();
             Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.addPlayer);
             message
                 .Add(false)
@@ -108,14 +112,18 @@ namespace ServerKMP
             Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.bullet);
             message
                 .Add(from)
-                .Add(to);
+                .Add(to)
+                .Add(new Vector3(1f, 0f, 0f)); // red bullet
             NetworkManager.server.SendToAll(message, original);
         }
 
         public static void KillFeed(int killer, int victim)
         {
             Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.killFeed);
-            message.Add($"{NetworkManager.clients[killer].username} killed {NetworkManager.clients[victim].username}");
+            if(killer == victim)
+                message.Add($"{NetworkManager.clients[killer].username} commited suicide");
+            else
+                message.Add($"{NetworkManager.clients[killer].username} killed {NetworkManager.clients[victim].username}");
             NetworkManager.server.SendToAll(message);
         }
 
@@ -168,10 +176,11 @@ namespace ServerKMP
             NetworkManager.server.Send(message, victim);
         }
 
-        public static void Respawn(ushort id)
+        public static void Respawn(ushort id, Vector3 pos)
         {
-            // tell player we are going to respawn them
-            NetworkManager.server.Send(Message.Create(MessageSendMode.Reliable, Packet_S2C.respawn), id);
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.respawn);
+            message.Add(pos);
+            NetworkManager.server.Send(message, id);
         }
 
         public static void ChatMessage(string msg)
@@ -185,6 +194,43 @@ namespace ServerKMP
             Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.chat);
             message.Add(msg);
             NetworkManager.server.Send(message, target);
+        }
+
+        public static void UpdateScoreboard()
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.scoreboard);
+            message.Add(NetworkManager.clients.Count);
+            foreach(var client in NetworkManager.clients.Values)
+            {
+                message.Add(client.id);
+                message.Add(client.username);
+                message.Add(client.kills);
+                message.Add(client.deaths);
+                message.Add(client.score);
+            }
+            NetworkManager.server.SendToAll(message);
+        }
+
+        public static void ColorPlayer(ushort who, string color)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.colorPlayer);
+            message.Add(who);
+            message.Add(color);
+            NetworkManager.server.SendToAll(message, who);
+        }
+
+        public static void Spectate(ushort spectator, ushort player)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.spectate);
+            message.Add(true);
+            message.Add(player);
+            NetworkManager.server.Send(message, spectator);
+        }
+        public static void SpectateEnd(ushort spectator)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_S2C.spectate);
+            message.Add(false);
+            NetworkManager.server.Send(message, spectator);
         }
     }
 
@@ -203,6 +249,7 @@ namespace ServerKMP
         [MessageHandler(Packet_C2S.position)]
         public static void KeyboardState(ushort from, Message message)
         {
+            if (NetworkManager.clients[from].spectating) return; // player is spectating, ignore their position
             Message broadcast = Message.Create(MessageSendMode.Unreliable, Packet_S2C.playerData);
             broadcast.Add(from);
             broadcast.Add(message.GetVector3());
@@ -225,10 +272,7 @@ namespace ServerKMP
         {
             Vector3 from = message.GetVector3();
             Vector3 to = message.GetVector3();
-            Message broadcast = Message.Create(MessageSendMode.Reliable, Packet_S2C.bullet);
-            broadcast.Add(from);
-            broadcast.Add(to);
-            NetworkManager.server.SendToAll(broadcast, fromId);
+            ServerSend.SendBullet(from, to, fromId);
         }
 
         [MessageHandler(Packet_C2S.damage)]
@@ -240,12 +284,25 @@ namespace ServerKMP
             NetworkManager.clients[who].hp -= damage;
             if(NetworkManager.clients[who].hp <= 0)
             {
+                if (from != who) // if not suicide
+                {
+                    NetworkManager.clients[from].kills++;
+                    NetworkManager.clients[from].score += 100;
+                }
+                NetworkManager.clients[who].score -= 50;
+                NetworkManager.clients[who].deaths++;
+                ServerSend.UpdateScoreboard();
                 ServerSend.KillFeed(from, who);
                 ServerSend.BroadcastKill(from, who);
-                NetworkManager.clients[who].MarkRespawn();
-                NetworkManager.clients[who].TeleportToSpawn();
-                NetworkManager.clients[who].hp = 100;
-                ServerSend.SetHP(who, 100);
+                if (from != who)
+                    NetworkManager.clients[who].EnterSpectate(from);
+                NetworkManager.clients[who].respawnTaskId = Program.ScheduledTask.Schedule(() =>
+                {
+                    NetworkManager.clients[who].ExitSpectate();
+                    NetworkManager.clients[who].RespawnPlayer();
+                    NetworkManager.clients[who].respawnTaskActive = false;
+                }, DateTime.Now.AddSeconds(5));
+                NetworkManager.clients[who].respawnTaskActive = true;
             }
             else
             {

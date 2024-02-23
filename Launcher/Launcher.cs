@@ -33,13 +33,13 @@ namespace Launcher
         private void Launcher_Load(object sender, EventArgs e)
         {
             Properties.Settings.Default.Reload();
-            textBox1.Text = Properties.Settings.Default.Username;
+            // check if we have discord bearer
+
             textBox2.Text = Properties.Settings.Default.Address;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.Username = textBox1.Text;
             Properties.Settings.Default.Address = textBox2.Text;
             Properties.Settings.Default.Save();
             if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe")))
@@ -51,7 +51,6 @@ namespace Launcher
             {
                 StartInfo = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe"))
                 {
-                    Arguments = textBox1.Text + " " + textBox2.Text + " -vanilla"
                 }
             };
             karlson.Start();

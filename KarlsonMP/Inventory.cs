@@ -16,9 +16,10 @@ namespace KarlsonMP
         {
             deagle = bundle.LoadAsset<GameObject>("assets/karlsonmp/models/deag.fbx");
             ak47 = bundle.LoadAsset<GameObject>("assets/karlsonmp/models/ak.fbx");
+            shotgun = bundle.LoadAsset<GameObject>("assets/karlsonmp/models/shotty.fbx");
         }
 
-        private static GameObject deagle, ak47;
+        private static GameObject deagle, ak47, shotgun;
 
         public static void Shoot(Transform ___guntip)
         {
@@ -56,7 +57,10 @@ namespace KarlsonMP
 
                 // send damage report
                 foreach(var x in damage)
+                {
                     ClientSend.Damage(x.Key, (int)Mathf.Floor(x.Value + 0.5f));
+                    KillFeedGUI.DamageReport(((int)Mathf.Floor(x.Value + 0.5f)).ToString());
+                }
             }
             if (WeaponMag[CurrentWeapon] == 0)
             {
@@ -110,7 +114,6 @@ namespace KarlsonMP
                     {
                         // calculate damage
                         damage = MaxDamage[CurrentWeapon] - DamageScaleByDist[CurrentWeapon] * distance;
-                        KMP_Console.Log($"dist: {distance}. {MaxDamage[CurrentWeapon]} -> {damage}");
                         if (damage < 0) damage = 0f; // dropoff not acounted by weapon specs
                         victim = hitInfo.transform.gameObject.GetComponent<GameObjectToPlayerId>().id;
                     }
@@ -126,10 +129,10 @@ namespace KarlsonMP
             ReloadTime = new float[] { 0f, 0f, 0f };
             CurrentWeapon = 0;
             WeaponObjects = new GameObject[3];
-            WeaponObjects[0] = WeaponLib.MakeGun(ak47.GetComponent<MeshFilter>().mesh, ak47.GetComponent<MeshRenderer>().materials, new Vector3(50f, 50f, 2.5f), Vector3.zero, new Vector3(0f, 180f, 0f), Vector3.zero, 0.2f, 0.15f);
-            WeaponObjects[1] = WeaponLib.MakeGun(deagle.GetComponent<MeshFilter>().mesh, deagle.GetComponent<MeshRenderer>().materials, new Vector3(1.44f, 1.44f, 0.527f), Vector3.zero, new Vector3(-90f, 0f, 0f), Vector3.zero, 1f, 0.4f);
+            WeaponObjects[0] = WeaponLib.MakeGun(ak47.GetComponent<MeshFilter>().mesh, ak47.GetComponent<MeshRenderer>().materials, new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), 0.2f, 0.15f);
+            WeaponObjects[1] = WeaponLib.MakeGun(deagle.GetComponent<MeshFilter>().mesh, deagle.GetComponent<MeshRenderer>().materials, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -1.3f, 0f), 0.3f, 0.4f);
             WeaponObjects[1].SetActive(false);
-            WeaponObjects[2] = KMP_PrefabManager.NewShotgun();
+            WeaponObjects[2] = WeaponLib.MakeGun(shotgun.GetComponent<MeshFilter>().mesh, shotgun.GetComponent<MeshRenderer>().materials, new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, 0.5f, 1f);
             WeaponObjects[2].SetActive(false);
             PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(WeaponObjects[0]);
         }
@@ -154,7 +157,8 @@ namespace KarlsonMP
             WeaponObjects[idx].SetActive(true);
             PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(WeaponObjects[idx]);
             // somewhat nice animation
-            WeaponObjects[idx].transform.localPosition = PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionGet<Vector3>("desiredPos");
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("desiredPos", DesiredPos[idx]);
+            WeaponObjects[idx].transform.localPosition = DesiredPos[idx];
             WeaponObjects[idx].transform.localRotation = Quaternion.Euler(0f, 90f, 179f);
             // switch cooldown
             CurrentWeaponCooldown = MaxCooldownTime[idx];
@@ -181,7 +185,7 @@ namespace KarlsonMP
 
         // 0 - ak47, 1 - deagle, 2 - shotgun
         private static int CurrentWeapon = 0;
-        private static int[] WeaponMag = new int[] { 30, 1, 8 };
+        private static int[] WeaponMag = new int[] { 20, 1, 8 };
         private static float[] ReloadTime = new float[] { 0f, 0f, 0f };
         private static float CurrentWeaponCooldown = 0f;
 
@@ -189,19 +193,21 @@ namespace KarlsonMP
 
         // weapon stats
         private static readonly int[]
-            MaxWeaponMag = new int[] { 30, 1, 8 }, // max bullets in magazine
+            MaxWeaponMag = new int[] { 20, 1, 8 }, // max bullets in magazine
             BulletCount = new int[] { 1, 1, 6 }; // bullets in a shot
         private static readonly float[]
-            WeaponSpread = new float[] { 0.03f, 0f, 0.1f }, // spread of a bullet
+            WeaponSpread = new float[] { 0.01f, 0f, 0.1f }, // spread of a bullet
             MaxCooldownTime = new float[] { 0.2f, 0.7f, 0.5f }, // cooldown time (after reload/swtich)
             BoostRecoil = new float[] { 0f, 0f, 7f }, // boost back (shotgun effect) per bullet
-            MaxDamage = new float[] { 20f, 100f, 20f }, // maximum damage the a bullet can deal (when target is at 0f distance or DamageDropoff is 0)
+            MaxDamage = new float[] { 40f, 100f, 20f }, // maximum damage the a bullet can deal (when target is at 0f distance or DamageDropoff is 0)
             DamageDropoff = new float[] { 0f, 0f, 50f }, // distance after which damage is 0
             DamageScaleByDist = new float[] { 0.1f, 0f, 0.3f }; // rate at which damage drops off with distance
                                                                 // if dist < damagedropoff : damage = MaxDamage - DamageScaleByDist * distance
                                                                 // idealy DamageDropoff should be MaxDamage / DamageScaleByDist
                                                                 // but it doesn't have to be
         private static readonly float MaxReloadTime = 0.5f;
+        private static readonly Vector3[] DesiredPos = new Vector3[] { Vector3.zero, new Vector3(0f, 0.2f, 0.2f), new Vector3(0f, 0.2f, 0.2f) };
+
         private static GameObject[] WeaponObjects;
 
         public static void Update()
@@ -252,7 +258,7 @@ namespace KarlsonMP
         public static void OnGUI()
         {
             GUI.DrawTexture(new Rect(Screen.width - 100f, Screen.height - 100f, 50f, 50f), ammoIcon);
-            GUI.Label(new Rect(Screen.width - 220f, Screen.height - 100f, 140f, 50f), $"<b><size=50><color=white>{WeaponMag[CurrentWeapon]} </color></size><size=25><color=silver>/{MaxWeaponMag[CurrentWeapon]}</color></size></b>");
+            GUI.Label(new Rect(Screen.width - 240f, Screen.height - 100f, 140f, 70f), $"<b><size=50><color=white>{WeaponMag[CurrentWeapon]} </color></size><size=25><color=silver>/{MaxWeaponMag[CurrentWeapon]}</color></size></b>", MonoHooks.defaultLabel);
         }
     }
 

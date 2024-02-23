@@ -46,5 +46,17 @@ namespace Launcher.Properties {
                 this["Address"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DiscordBearer {
+            get {
+                return ((string)(this["DiscordBearer"]));
+            }
+            set {
+                this["DiscordBearer"] = value;
+            }
+        }
     }
 }
