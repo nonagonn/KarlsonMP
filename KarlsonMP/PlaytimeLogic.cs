@@ -46,6 +46,8 @@ namespace KarlsonMP
         public static bool paused = false;
         public static int hp = 100;
         public static int spectatingId { get; private set; } = 0;
+        public static bool showNametags = true;
+        public static bool suicided = false;
         public static void StartSpectate(int targetId)
         {
             spectatingId = targetId;
@@ -99,8 +101,9 @@ namespace KarlsonMP
                 else
                     ForcePause(!paused);
             }
-            if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.Return))
-                chatOpened = true;
+            if(!paused)
+                if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.Return))
+                    chatOpened = true;
 
             if (paused)
             {
@@ -236,6 +239,7 @@ namespace KarlsonMP
             // draw names
             foreach (Player p in players)
             {
+                if (!p.nametagShown) continue;
                 string text = "(" + p.id + ") " + p.username;
 
                 Vector3 pos = Camera.main.WorldToScreenPoint(p.player.transform.position + new Vector3(0f, 2f, 0f));
@@ -247,7 +251,7 @@ namespace KarlsonMP
                 textSize.x += 10f;
                 GUI.Label(new Rect(pos.x - textSize.x / 2, (Screen.height - pos.y) - textSize.y / 2, textSize.x, textSize.y), text, nameStyle);
             }
-
+            
             if (showDebug)
                 GUI.Label(new Rect(Screen.width - 121f, Screen.height - 35f, 100f, 20f), $"<color=white>RTT: {NetworkManager.client.SmoothRTT}</color>", MonoHooks.defaultLabel);
 

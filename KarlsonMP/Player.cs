@@ -43,7 +43,7 @@ namespace KarlsonMP
         public string username;
         public GameObject player;
         public GameObject playerCollider;
-        public bool spectating = false;
+        public bool nametagShown = false;
 
         public Player(ushort _id, string _username)
         {
@@ -77,12 +77,17 @@ namespace KarlsonMP
             {
                 KMP_Console.Log(e.ToString());
             }
+            nametagShown = PlaytimeLogic.showNametags;
         }
 
         public void Destroy()
         {
             UnityEngine.Object.Destroy(player);
             UnityEngine.Object.Destroy(playerCollider);
+
+            // check if we were spectating this player
+            if (PlaytimeLogic.spectatingId == id)
+                PlaytimeLogic.StartSpectate(NetworkManager.client.Id); // spec self
         }
 
         private bool crouch, moving, grounded;
@@ -110,7 +115,6 @@ namespace KarlsonMP
             animFix++;
             if(animFix == 100)
             {
-                KMP_Console.Log("anim fix");
                 animFix = 0;
                 shoulderL.localPosition = shouldl_Position;
                 shoulderL.localRotation = shouldl_Rotation;

@@ -237,8 +237,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BulletRenderer.cs" />
+    <Compile Include="DiscordAPI\ActivityManager.cs" />
+    <Compile Include="DiscordAPI\Constants.cs" />
+    <Compile Include="DiscordAPI\Core.cs" />
     <Compile Include="ForcedCultureInfo.cs" />
     <Compile Include="HarmonyHooks.cs" />
+    <Compile Include="HUDMessages.cs" />
     <Compile Include="Inventory.cs" />
     <Compile Include="KillFeedGUI.cs" />
     <Compile Include="KMP_Audio.cs" />

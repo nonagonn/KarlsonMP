@@ -205,7 +205,11 @@ namespace KarlsonMP
     {
         public static bool Prefix()
         {
-            ClientSend.Damage(NetworkManager.client.Id, 100); // suicide
+            if(!PlaytimeLogic.suicided)
+            {
+                ClientSend.Damage(NetworkManager.client.Id, 100); // suicide
+                PlaytimeLogic.suicided = true;
+            }
             return false;
         }
     }

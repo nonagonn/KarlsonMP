@@ -1,6 +1,7 @@
 ﻿using Riptide;
 using Riptide.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -19,7 +20,6 @@ namespace KarlsonMP
             RiptideLogger.Initialize(KMP_Console.Log, false);
             client = new Client("Riptide"); // logger name
             client.Connect(Loader.address + ":" + Loader.port);
-            client.Connected += DidConnect;
             client.ConnectionFailed += FailedToConnect;
             client.Disconnected += DidDisconnect;
         }
@@ -30,11 +30,6 @@ namespace KarlsonMP
                 client.Disconnect();
         }
 
-        private static void DidConnect(object sender, EventArgs e)
-        {
-            ClientSend.Handshake();
-        }
-
         private static void FailedToConnect(object sender, ConnectionFailedEventArgs e)
         {
             MonoHooks.ShowDialog("KarlsonMP reborn", "Failed to connect to the server", "Exit game", "", () => { Application.Quit(); });
@@ -42,31 +37,38 @@ namespace KarlsonMP
 
         private static void DidDisconnect(object sender, DisconnectedEventArgs e)
         {
-            MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection", "Exit game", "", () => { Application.Quit(); });
+            if(e.Message == null)
+                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection", "Exit game", "", () => { Application.Quit(); });
+            else
+                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection:\n\n" + e.Message.GetString(), "Exit game", "", () => { Application.Quit(); });
         }
     }
 
     public static class Packet_S2C
     {
-        public const ushort initialPlayerList = 1; // initial player list
-        public const ushort addPlayer = 2; // player join/left
-        public const ushort playerData = 3; // server snapshot of the world
-        public const ushort bullet = 4; // bullet ray
-        public const ushort killFeed = 5;
-        public const ushort teleport = 6;
-        public const ushort map = 7;
-        public const ushort hp = 8;
-        public const ushort kill = 9; // we killed someone
-        public const ushort death = 10; // we died
-        public const ushort respawn = 11; // server respawned us (teleport should come before/after)
-        public const ushort chat = 12;
-        public const ushort scoreboard = 13;
-        public const ushort colorPlayer = 14; // color: 'yellow', 'red', 'blue'
-        public const ushort spectate = 15; // spectate player / exit spectate
+        public const ushort encryptionKey = 1; // used for sending discord bearer token
+        public const ushort initialPlayerList = 2; // initial player list
+        public const ushort addPlayer = 3; // player join/left
+        public const ushort playerData = 4; // server snapshot of the world
+        public const ushort bullet = 5; // bullet ray
+        public const ushort killFeed = 6;
+        public const ushort teleport = 7;
+        public const ushort map = 8;
+        public const ushort hp = 9;
+        public const ushort kill = 10; // we killed someone
+        public const ushort death = 11; // we died
+        public const ushort respawn = 12; // server respawned us (teleport should come before/after)
+        public const ushort chat = 13;
+        public const ushort scoreboard = 14;
+        public const ushort colorPlayer = 15; // color: 'yellow', 'red', 'blue'
+        public const ushort spectate = 16; // spectate player / exit spectate
+        public const ushort hudMessage = 17;
+        public const ushort selfBulletColor = 18; // change own bullet color
+        public const ushort showNametags = 19;
     }
     public static class Packet_C2S
     {
-        public const ushort handshake = 1; // handshake, send username
+        public const ushort handshake = 1; // handshake, send discord bearer
         public const ushort position = 2; // position
         public const ushort requestScene = 3; // request sync and initialPlayerList
         public const ushort shoot = 4; // client shoot
@@ -76,10 +78,11 @@ namespace KarlsonMP
 
     public class ClientSend
     {
-        public static void Handshake()
+        public static void Handshake(byte[] encryptedDiscordToken)
         {
             Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.handshake);
-            message.Add(Loader.username);
+            message.Add(encryptedDiscordToken);
+            message.Add(Loader.discord_user.Id);
             NetworkManager.client.Send(message);
         }
 
@@ -131,6 +134,41 @@ namespace KarlsonMP
     {
         public static bool PlayerList { get; private set; } = false;
 
+        [MessageHandler(Packet_S2C.encryptionKey)]
+        public static void EncryptionKey(Message message)
+        {
+            byte[] blob = message.GetBytes();
+
+            void EncryptHandshake()
+            {
+                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.ImportCspBlob(blob);
+                    rsa.PersistKeyInCsp = false;
+                    byte[] discordTokenEcrypted = rsa.Encrypt(Encoding.ASCII.GetBytes(Loader.discord_token), false);
+                    ClientSend.Handshake(discordTokenEcrypted);
+                }
+            }
+
+            if(!Loader.OnLinux)
+            {
+                IEnumerator waitForDiscord()
+                {
+                    KillFeedGUI.AddText("Waiting for discord");
+                    while (Loader.discord_token == null || Loader.discord_user.Id == 0)
+                        yield return new WaitForSecondsRealtime(0.1f);
+                    KillFeedGUI.AddText("Sending discord account");
+                    EncryptHandshake();
+                }
+                Loader.monoHooks.StartCoroutine(waitForDiscord());
+            }
+            else
+            {
+                KillFeedGUI.AddText("Sending discord account");
+                EncryptHandshake();
+            }
+        }
+
         [MessageHandler(Packet_S2C.initialPlayerList)]
         public static void InitialPlayerList(Message message)
         {
@@ -155,7 +193,6 @@ namespace KarlsonMP
             {
                 Player _p = PlaytimeLogic.players.Find(p => p.id == id);
                 if (_p == null) return; // player doesn't exist
-                KillFeedGUI.AddText($"<color=red>({id}) {_p.username} disconnected</color>");
                 _p.Destroy();
                 PlaytimeLogic.players.Remove(_p);
                 return;
@@ -164,7 +201,6 @@ namespace KarlsonMP
 
             if (PlaytimeLogic.players.Find(x => x.id == id) != null) return; // player already exists
             PlaytimeLogic.players.Add(new Player(id, username));
-            KillFeedGUI.AddText($"<color=green>({id}) {username} connected</color>");
         }
 
         [MessageHandler(Packet_S2C.playerData)]
@@ -231,7 +267,7 @@ namespace KarlsonMP
                 Game.Instance.StartGame();
                 return;
             }
-            int httpPort = message.GetInt();
+            ushort httpPort = message.GetUShort();
             // download map from http server
             KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(Loader.address, httpPort));
         }
@@ -266,10 +302,13 @@ namespace KarlsonMP
             if (PlaytimeLogic.spectatingId != 0)
                 PlaytimeLogic.ExitSpectate();
             PlayerMovement.Instance.ReflectionSet("dead", false);
+            PlaytimeLogic.suicided = false;
             // reset guns ammo, because we got respawned
             Inventory.ReloadAll();
             Vector3 position = message.GetVector3();
             PlayerMovement.Instance.transform.position = position;
+            PlayerMovement.Instance.rb.velocity = Vector3.zero;
+            PlayerMovement.Instance.ReflectionInvoke("StopCrouch");
         }
 
         [MessageHandler(Packet_S2C.chat)]
@@ -318,6 +357,60 @@ namespace KarlsonMP
                 PlaytimeLogic.ExitSpectate();
             else
                 PlaytimeLogic.StartSpectate(message.GetUShort());
+        }
+
+        [MessageHandler(Packet_S2C.hudMessage)]
+        public static void HudMessage(Message message)
+        {
+            int position = message.GetInt();
+            string text = message.GetString();
+            if (position < 0 || position > 3) return;
+            switch (position)
+            {
+                case 0:
+                    HUDMessages.topCenter = text;
+                    break;
+                case 1:
+                    HUDMessages.aboveCrosshair = text;
+                    break;
+                case 2:
+                    HUDMessages.subtitle = text;
+                    break;
+                case 3:
+                    HUDMessages.bottomLeft = text;
+                    break;
+            }
+        }
+
+        [MessageHandler(Packet_S2C.selfBulletColor)]
+        public static void SelfBulletColor(Message message)
+        {
+            Vector3 c = message.GetVector3();
+            Inventory.selfBulletColor = new Color(c.x, c.y, c.z);
+        }
+
+        [MessageHandler(Packet_S2C.showNametags)]
+        public static void ShowNametags(Message message)
+        {
+            bool toggle = message.GetBool();
+            if(message.UnreadLength > 0)
+            {
+                // player list toggle
+                while(message.UnreadLength > 0)
+                {
+                    ushort pid = message.GetUShort();
+                    var p = (from x in PlaytimeLogic.players where x.id == pid select x).First();
+                    if (p == null) continue;
+                    p.nametagShown = toggle;
+                }
+            }
+            else
+            {
+                PlaytimeLogic.showNametags = toggle;
+                // global toggle
+                foreach (var p in PlaytimeLogic.players)
+                    p.nametagShown = PlaytimeLogic.showNametags;
+            }
         }
     }
 }

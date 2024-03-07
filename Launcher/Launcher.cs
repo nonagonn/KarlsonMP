@@ -1,4 +1,5 @@
-﻿using MInject;
+﻿using Discord;
+using MInject;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -30,10 +31,24 @@ namespace Launcher
             InitializeComponent();
         }
 
+        private const long CLIENT_ID = 747409309918429295;
+
         private void Launcher_Load(object sender, EventArgs e)
         {
             Properties.Settings.Default.Reload();
-            // check if we have discord bearer
+            // check if we have discord
+            Discord.Discord discord = new Discord.Discord(CLIENT_ID, (ulong)Discord.CreateFlags.Default);
+            try
+            {
+                discord.RunCallbacks();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Discord API error\n" + ex.ToString());
+                Process.GetCurrentProcess().Kill();
+                return;
+            }
+            label1.Text = "You need Discord to use this mod";
 
             textBox2.Text = Properties.Settings.Default.Address;
         }
@@ -51,6 +66,7 @@ namespace Launcher
             {
                 StartInfo = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe"))
                 {
+                    Arguments = '"' + textBox2.Text + '"'
                 }
             };
             karlson.Start();
@@ -84,8 +100,12 @@ namespace Launcher
                 MessageBox.Show("Couldn't execute MInject.\nPlease retry");
                 return;
             }
-            Environment.Exit(0);
+            Process.GetCurrentProcess().Kill();
             return;
+        }
+
+        private void Launcher_FormClosing(object sender, FormClosingEventArgs e)
+        {
         }
     }
 }

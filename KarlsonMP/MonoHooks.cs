@@ -32,6 +32,7 @@ namespace KarlsonMP
             GuiCtor();
             PlaytimeLogic.Start();
             Scoreboard.GuiCtor();
+            HUDMessages.GuiCtor();
         }
 
         public void FixedUpdate()
@@ -45,6 +46,9 @@ namespace KarlsonMP
 
         public void Update()
         {
+            if(!Loader.OnLinux)
+                Loader.discord.RunCallbacks();
+
             Time.timeScale = 1f;
             PlaytimeLogic.Update();
             Inventory.Update();
@@ -69,6 +73,7 @@ namespace KarlsonMP
             PlaytimeLogic.OnGUI();
             Inventory.OnGUI();
             Scoreboard.OnGUI();
+            HUDMessages.OnGUI();
 
             if (dialogData.show)
             {

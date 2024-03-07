@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using HarmonyLib;
+using Discord;
 
 namespace KarlsonMP
 {
@@ -22,6 +23,11 @@ namespace KarlsonMP
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern bool SetWindowText(IntPtr hwnd, string lpString);
 
+        public const long DISCORD_CLIENTID = 747409309918429295;
+        public static Discord.Discord discord;
+        public static string discord_token = null;
+        public static User discord_user = new User() { Id = 0 };
+
         public static string username;
         public static string address;
         public static int port;
@@ -29,21 +35,21 @@ namespace KarlsonMP
         public static MonoHooks monoHooks;
         public static Harmony harmony;
 
+        public static bool OnLinux = false;
+
         public static void Start()
         {
-            if (Environment.GetCommandLineArgs().Length < 3)
+            if (Environment.GetCommandLineArgs().Length < 2)
             {
                 MessageBox(IntPtr.Zero, "Invalid parameters", "KarlsonMP", 0);
                 Process.GetCurrentProcess().Kill();
                 return;
             }
 
-            username = Environment.GetCommandLineArgs()[1];
-
             ForcedCultureInfo.Install();
 
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP - {username}.log")))
-                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP - {username}.log"));
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP.log")))
+                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP.log"));
 
             Application.logMessageReceived += (a, b, c) =>
             {
@@ -51,15 +57,39 @@ namespace KarlsonMP
                     KMP_Console.Log(a + " " + b);
             };
 
-            string[] adr = Environment.GetCommandLineArgs()[2].Split(':');
-            if (adr.Length == 1)
-                port = 11337;
+            if(Environment.GetCommandLineArgs()[1] == "linux")
+            {
+                OnLinux = true;
+                if (Environment.GetCommandLineArgs().Length < 5)
+                {
+                    MessageBox(IntPtr.Zero, "Invalid parameters (linux)", "KarlsonMP", 0);
+                    Process.GetCurrentProcess().Kill();
+                    return;
+                }
+
+                string[] adr = Environment.GetCommandLineArgs()[2].Split(':');
+                if (adr.Length == 1)
+                    port = 11337;
+                else
+                    port = int.Parse(adr[1]);
+                address = ToIPAddress(adr[0]).ToString();
+
+                discord_token = Environment.GetCommandLineArgs()[3];
+                discord_user = new User { Id = long.Parse(Environment.GetCommandLineArgs()[4]) };
+            }
             else
-                port = int.Parse(adr[1]);
-            address = ToIPAddress(adr[0]).ToString();
+            {
+                string[] adr = Environment.GetCommandLineArgs()[1].Split(':');
+                if (adr.Length == 1)
+                    port = 11337;
+                else
+                    port = int.Parse(adr[1]);
+                address = ToIPAddress(adr[0]).ToString();
 
-            SetWindowText(FindWindow("", Application.productName), $"KarlsonMP - {address}:{port}");
-
+                SetWindowText(FindWindow(null, Application.productName), $"KarlsonMP - {address}:{port}");
+                InitDiscord();
+            }
+            
             GameObject mhooks = new GameObject("MonoHooks");
             monoHooks = mhooks.AddComponent<MonoHooks>();
             UnityEngine.Object.DontDestroyOnLoad(mhooks);
@@ -115,6 +145,53 @@ namespace KarlsonMP
             return addrs.FirstOrDefault(addr => addr.AddressFamily == favoredFamily)
                    ??
                    addrs.FirstOrDefault();
+        }
+
+        public static void InitDiscord()
+        {
+            try
+            {
+                discord = new Discord.Discord(DISCORD_CLIENTID, (uint)CreateFlags.NoRequireDiscord);
+                discord.SetLogHook(LogLevel.Debug, (LogLevel level, string message) =>
+                {
+                    KMP_Console.Log($"[Discord/{level}] {message}");
+                });
+                discord.RunCallbacks();
+            }
+            catch (ResultException result)
+            {
+                KMP_Console.Log($"<color=red>Failed to initialize Discord. {result}</color>");
+                MonoHooks.ShowDialog("Discord Error", "Failed to initialize Discord.", "Exit game", "", () => Application.Quit());
+                return;
+            }
+            discord.GetApplicationManager().GetOAuth2Token((Result result, ref Discord.OAuth2Token token) =>
+            {
+                if (result != Result.Ok) return;
+                discord_token = token.AccessToken;
+                KMP_Console.Log(discord_token);
+            });
+            discord.GetUserManager().OnCurrentUserUpdate += () =>
+            {
+                discord_user = discord.GetUserManager().GetCurrentUser();
+            };
+
+            var activity = new Activity
+            {
+                ApplicationId = DISCORD_CLIENTID,
+                Assets = new ActivityAssets
+                {
+                    LargeImage = "kmp",
+                    SmallImage = "karlson",
+                    SmallText = "Karlson (itch.io) made by Dani"
+                },
+                Details = "made by devilexe",
+                State = "[Closed Beta]",
+                Timestamps = new ActivityTimestamps
+                {
+                    Start = (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds
+                },
+            };
+            discord.GetActivityManager().UpdateActivity(activity, (_) => { });
         }
     }
 }

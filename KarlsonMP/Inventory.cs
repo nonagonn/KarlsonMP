@@ -12,6 +12,8 @@ namespace KarlsonMP
 {
     public class Inventory
     {
+        public static Color selfBulletColor = Color.blue;
+
         public static void LoadAssets(AssetBundle bundle)
         {
             deagle = bundle.LoadAsset<GameObject>("assets/karlsonmp/models/deag.fbx");
@@ -105,7 +107,7 @@ namespace KarlsonMP
             PlayerMovement.Instance.gameObject.layer = 13; // change layer to not hit our capsule
             if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.rotation * Vector3.forward + new Vector3(UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon]), UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon]), UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon])), out RaycastHit hitInfo, 200f, hittable))
             {
-                BulletRenderer.DrawBullet(___guntip.position, hitInfo.point, Color.blue);
+                BulletRenderer.DrawBullet(___guntip.position, hitInfo.point, selfBulletColor);
                 ClientSend.Shoot(gunTip, hitInfo.point);
                 if (hitInfo.transform.gameObject.GetComponent<GameObjectToPlayerId>() != null)
                 {
@@ -196,12 +198,12 @@ namespace KarlsonMP
             MaxWeaponMag = new int[] { 20, 1, 8 }, // max bullets in magazine
             BulletCount = new int[] { 1, 1, 6 }; // bullets in a shot
         private static readonly float[]
-            WeaponSpread = new float[] { 0.01f, 0f, 0.1f }, // spread of a bullet
+            WeaponSpread = new float[] { 0.01f, 0f, 0.075f }, // spread of a bullet
             MaxCooldownTime = new float[] { 0.2f, 0.7f, 0.5f }, // cooldown time (after reload/swtich)
             BoostRecoil = new float[] { 0f, 0f, 7f }, // boost back (shotgun effect) per bullet
-            MaxDamage = new float[] { 40f, 100f, 20f }, // maximum damage the a bullet can deal (when target is at 0f distance or DamageDropoff is 0)
+            MaxDamage = new float[] { 40f, 100f, 40f }, // maximum damage the a bullet can deal (when target is at 0f distance or DamageDropoff is 0)
             DamageDropoff = new float[] { 0f, 0f, 50f }, // distance after which damage is 0
-            DamageScaleByDist = new float[] { 0.1f, 0f, 0.3f }; // rate at which damage drops off with distance
+            DamageScaleByDist = new float[] { 0.1f, 0f, 1f }; // rate at which damage drops off with distance
                                                                 // if dist < damagedropoff : damage = MaxDamage - DamageScaleByDist * distance
                                                                 // idealy DamageDropoff should be MaxDamage / DamageScaleByDist
                                                                 // but it doesn't have to be
@@ -257,6 +259,7 @@ namespace KarlsonMP
 
         public static void OnGUI()
         {
+            if (!ClientHandle.PlayerList) return;
             GUI.DrawTexture(new Rect(Screen.width - 100f, Screen.height - 100f, 50f, 50f), ammoIcon);
             GUI.Label(new Rect(Screen.width - 240f, Screen.height - 100f, 140f, 70f), $"<b><size=50><color=white>{WeaponMag[CurrentWeapon]} </color></size><size=25><color=silver>/{MaxWeaponMag[CurrentWeapon]}</color></size></b>", MonoHooks.defaultLabel);
         }
