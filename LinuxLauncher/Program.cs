@@ -14,7 +14,26 @@ namespace LinuxLauncher
         {
             Console.WriteLine("Experimental linux launcherk");
             Console.WriteLine("Server IP:");
-            ip = Console.ReadLine();
+            Process zenityInput = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "zenity",
+                    Arguments = "--entry --text \"Enter server IP\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                }
+            };
+            zenityInput.Start();
+            zenityInput.WaitForExit();
+            ip = zenityInput.StandardOutput.ReadLine()?.Trim();
+            if(ip == null || ip.Length < 2)
+            {
+                Console.WriteLine("User canceled");
+                return;
+            }
+            Console.WriteLine(ip);
             Console.WriteLine("Initializing Discord API..");
             InitDiscord();
         }
