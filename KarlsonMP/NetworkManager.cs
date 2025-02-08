@@ -15,11 +15,18 @@ namespace KarlsonMP
     public class NetworkManager
     {
         public static Client client;
-        public static void Connect()
+        public static string address { get; private set; }
+        public static int port { get; private set; }
+        public static string username { get; private set; }
+        public static void Connect(string _address, int _port, string _username)
         {
+            address = _address;
+            port = _port;
+            username = _username;
+            KillFeedGUI.AddText($"Connecting to {address}:{port}");
             RiptideLogger.Initialize(KMP_Console.Log, false);
             client = new Client("Riptide"); // logger name
-            client.Connect(Loader.address + ":" + Loader.port);
+            client.Connect(address + ":" + port);
             client.ConnectionFailed += FailedToConnect;
             client.Disconnected += DidDisconnect;
         }
@@ -46,7 +53,7 @@ namespace KarlsonMP
 
     public static class Packet_S2C
     {
-        public const ushort encryptionKey = 1; // used for sending discord bearer token
+        public const ushort handshake = 1; // handshake, send MOTD
         public const ushort initialPlayerList = 2; // initial player list
         public const ushort addPlayer = 3; // player join/left
         public const ushort playerData = 4; // server snapshot of the world
@@ -78,11 +85,10 @@ namespace KarlsonMP
 
     public class ClientSend
     {
-        public static void Handshake(byte[] encryptedDiscordToken)
+        public static void Handshake(string username)
         {
             Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.handshake);
-            message.Add(encryptedDiscordToken);
-            message.Add(Loader.discord_user.Id);
+            message.Add(username);
             NetworkManager.client.Send(message);
         }
 
@@ -134,9 +140,13 @@ namespace KarlsonMP
     {
         public static bool PlayerList { get; private set; } = false;
 
-        [MessageHandler(Packet_S2C.encryptionKey)]
-        public static void EncryptionKey(Message message)
+        [MessageHandler(Packet_S2C.handshake)]
+        public static void Handshake(Message message)
         {
+            string motd = message.GetString();
+            KillFeedGUI.AddText("Connected to " + motd);
+            ClientSend.Handshake(NetworkManager.username);
+            /*
             byte[] blob = message.GetBytes();
 
             void EncryptHandshake()
@@ -166,7 +176,7 @@ namespace KarlsonMP
             {
                 KillFeedGUI.AddText("Sending discord account");
                 EncryptHandshake();
-            }
+            }*/
         }
 
         [MessageHandler(Packet_S2C.initialPlayerList)]
@@ -270,7 +280,7 @@ namespace KarlsonMP
             }
             ushort httpPort = message.GetUShort();
             // download map from http server
-            KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(Loader.address, httpPort));
+            KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(NetworkManager.address, httpPort));
         }
 
         [MessageHandler(Packet_S2C.hp)]
@@ -400,7 +410,7 @@ namespace KarlsonMP
                 while(message.UnreadLength > 0)
                 {
                     ushort pid = message.GetUShort();
-                    var p = (from x in PlaytimeLogic.players where x.id == pid select x).First();
+                    var p = (from x in PlaytimeLogic.players where x.id == pid select x).FirstOrDefault();
                     if (p == null) continue;
                     p.nametagShown = toggle;
                 }

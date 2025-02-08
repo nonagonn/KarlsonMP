@@ -1,5 +1,4 @@
-﻿using ServerNET_CORE;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +19,6 @@ namespace ServerKMP
                 Console.WriteLine("Quitting server..");
                 Program.ExitServer();
                 MapDownloader.Exit();
-                ServerStatus.MarkOffline();
             });
             commands.Add("map", (args) =>
             {
@@ -40,7 +38,29 @@ namespace ServerKMP
             commands.Add("gamemode", (args) =>
             {
                 if (args.Length != 2) Console.WriteLine("gamemode [mode] - change gamemode to [mode]");
-                else Console.WriteLine("changing gamemode to " + args[1]);
+                else
+                {
+                    GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStop);
+                    if (args[1] == "FFA")
+                    {
+                        Console.WriteLine("Changing gamemode to FFA");
+                        GamemodeManager.currentGamemode = new Gamemodes.FFA.GamemodeEntry();
+                    }
+                    else if (args[1] == "TDM")
+                    {
+                        Console.WriteLine("Changing gamemode to TDM");
+                        GamemodeManager.currentGamemode = new Gamemodes.TDM.GamemodeEntry();
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unknown gamemde");
+                        return;
+                    }
+                    GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStart);
+                    // re-handshake all players to gamemode
+                    foreach (var i in NetworkManager.registeredOnGamemode)
+                        GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new GamemodeApi.MessageClientToServer.MessageHandshake(i, NetworkManager.usernameDatabase[i])));
+                }
             });
 
             commands.Add("cmds", (_) =>

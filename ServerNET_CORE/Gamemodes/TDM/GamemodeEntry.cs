@@ -67,6 +67,10 @@ namespace ServerKMP.Gamemodes.TDM
                 }, DateTime.Now.AddSeconds(5));
             }, WarmupEnd);
         }
+        public override void OnStop()
+        {
+            players.Clear();
+        }
 
         public override void ProcessMessage(MessageClientToServer.MessageBase_C2S message)
         {

@@ -5,19 +5,13 @@ VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevKit", "DevKit\DevKit.csproj", "{7D8F7E54-FDC4-4672-AF6A-F40294D8FE84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher", "Launcher\Launcher.csproj", "{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kernel", "Kernel\Kernel.csproj", "{DABB6013-1FF1-45EE-99A5-660A32F50C71}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KarlsonMP", "KarlsonMP\KarlsonMP.csproj", "{36F2A8FD-1068-4262-9DB8-7565232BBE28}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MelonLoaderDummyLoader", "MelonLoaderDummyLoader\MelonLoaderDummyLoader.csproj", "{AD197C00-8369-4EA7-83CC-F57F698BC726}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinuxLauncher", "LinuxLauncher\LinuxLauncher.csproj", "{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerNET_CORE", "ServerNET_CORE\ServerNET_CORE.csproj", "{C9DCE579-EC60-466E-8836-56836519F9FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KarlsonMPLauncher", "KarlsonMPLauncher\KarlsonMPLauncher.csproj", "{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kernel", "Kernel\Kernel.csproj", "{38EE1C83-99FB-40E4-8549-D035C4BA9026}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Preloader", "Preloader\Preloader.csproj", "{23655362-18A2-4838-A78E-FDDB3A36DFE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,22 +29,6 @@ Global
 		{7D8F7E54-FDC4-4672-AF6A-F40294D8FE84}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7D8F7E54-FDC4-4672-AF6A-F40294D8FE84}.Release|KarlsonMP.ActiveCfg = Release|x64
 		{7D8F7E54-FDC4-4672-AF6A-F40294D8FE84}.Release|KarlsonMP.Build.0 = Release|x64
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Debug|KarlsonMP.ActiveCfg = Debug|x64
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Debug|KarlsonMP.Build.0 = Debug|x64
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Release|KarlsonMP.ActiveCfg = Release|x64
-		{EE1932FF-30D5-4F4C-BFD3-3C594201D91B}.Release|KarlsonMP.Build.0 = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Debug|Any CPU.ActiveCfg = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Debug|Any CPU.Build.0 = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Debug|KarlsonMP.ActiveCfg = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Debug|KarlsonMP.Build.0 = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Release|Any CPU.ActiveCfg = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Release|Any CPU.Build.0 = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Release|KarlsonMP.ActiveCfg = Release|x64
-		{DABB6013-1FF1-45EE-99A5-660A32F50C71}.Release|KarlsonMP.Build.0 = Release|x64
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
@@ -59,22 +37,6 @@ Global
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Release|Any CPU.Build.0 = Release|Any CPU
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
 		{36F2A8FD-1068-4262-9DB8-7565232BBE28}.Release|KarlsonMP.Build.0 = Release|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
-		{AD197C00-8369-4EA7-83CC-F57F698BC726}.Release|KarlsonMP.Build.0 = Release|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
-		{7B39FD65-D656-4BF9-A7FA-46B0A4BDFAEE}.Release|KarlsonMP.Build.0 = Release|Any CPU
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
@@ -83,14 +45,22 @@ Global
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
 		{C9DCE579-EC60-466E-8836-56836519F9FC}.Release|KarlsonMP.Build.0 = Release|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
-		{26A76B3C-1E2F-4561-A0DD-C623A4B30BE1}.Release|KarlsonMP.Build.0 = Release|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
+		{38EE1C83-99FB-40E4-8549-D035C4BA9026}.Release|KarlsonMP.Build.0 = Release|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Debug|KarlsonMP.ActiveCfg = Debug|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Debug|KarlsonMP.Build.0 = Debug|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Release|KarlsonMP.ActiveCfg = Release|Any CPU
+		{23655362-18A2-4838-A78E-FDDB3A36DFE0}.Release|KarlsonMP.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

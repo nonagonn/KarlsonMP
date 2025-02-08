@@ -1,1 +1,0 @@
-dotnet publish -c release -o ./linux-build -r linux-x64 /p:PublishSingleFile=true ./LinuxLauncher.csproj

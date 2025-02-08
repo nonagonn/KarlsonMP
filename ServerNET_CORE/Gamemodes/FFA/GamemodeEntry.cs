@@ -23,6 +23,10 @@ namespace ServerKMP.Gamemodes.FFA
         public static Dictionary<ushort, Player> players = new Dictionary<ushort, Player>();
 
         public override void OnStart() { }
+        public override void OnStop()
+        {
+            players.Clear();
+        }
 
         public override void ProcessMessage(MessageClientToServer.MessageBase_C2S message)
         {

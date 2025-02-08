@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.IO;
 using ServerKMP.GamemodeApi;
 using System.Net;
-using ServerNET_CORE;
 
 namespace ServerKMP
 {
@@ -19,6 +18,7 @@ namespace ServerKMP
         public static int CurrentTick { get; private set; } = 0;
         public static HashSet<ushort> clientsAwaitingHandshake = new HashSet<ushort>(); // players that need to send handshake
         public static HashSet<ushort> registeredOnGamemode = new HashSet<ushort>(); // players that were sent to gamemode to be processed via C2S handshake
+        public static Dictionary<ushort, string> usernameDatabase = new Dictionary<ushort, string>();
 
         public static void Start()
         {
@@ -33,9 +33,9 @@ namespace ServerKMP
 
         private static void Server_ClientConnected(object? sender, ServerConnectedEventArgs e)
         {
-            Message encryptionKey = Message.Create(MessageSendMode.Reliable, Packet_S2C.encryptionKey);
-            encryptionKey.Add(Program.RSA_blob);
-            server!.Send(encryptionKey, e.Client);
+            Message handshake = Message.Create(MessageSendMode.Reliable, Packet_S2C.handshake);
+            handshake.Add("<MOTD>");
+            server!.Send(handshake, e.Client);
             clientsAwaitingHandshake.Add(e.Client.Id);
             KMP_TaskScheduler.Schedule(() =>
             {
@@ -43,8 +43,6 @@ namespace ServerKMP
                 if (clientsAwaitingHandshake.Contains(e.Client.Id))
                     server.DisconnectClient(e.Client, Message.Create().Add("Didn't respond to handshake."));
             }, DateTime.Now.AddSeconds(30));
-            Console.WriteLine("[DISCORD_LOGIN] Sent RSA key to " + e.Client.Id);
-            ServerStatus.SetServerStatus(1, "**Players**          " + server.ClientCount + "/" + Config.MAX_PLAYERS);
         }
 
         private static void Server_ClientDisconnected(object? sender, ServerDisconnectedEventArgs e)
@@ -56,7 +54,6 @@ namespace ServerKMP
                 registeredOnGamemode.Remove(e.Client.Id);
                 GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.OnPlayerDisconnect(e.Client.Id));
             }
-            ServerStatus.SetServerStatus(1, "**Players**          " + (server!.ClientCount) + "/" + Config.MAX_PLAYERS);
         }
 
         public static void Update()
@@ -73,7 +70,7 @@ namespace ServerKMP
     
     public static class Packet_S2C
     {
-        public const ushort encryptionKey = 1; // used for sending discord bearer token
+        public const ushort handshake = 1; // handshake, send MOTD
         public const ushort initialPlayerList = 2; // initial player list
         public const ushort addPlayer = 3; // player join/left
         public const ushort playerData = 4; // server snapshot of the world
@@ -109,42 +106,12 @@ namespace ServerKMP
         [MessageHandler(Packet_C2S.handshake)]
         public static void Handshake(ushort from, Message message)
         {
-            if(Config.IGNORE_DISCORD)
-            {
-                byte[] usernameEncrypted = message.GetBytes();
-                // decrypt token
-                string username = Encoding.ASCII.GetString(Program.RSA.Decrypt(usernameEncrypted, false));
-                Console.WriteLine("[DISCORD_LOGIN] Setting username " + username);
-                NetworkManager.clientsAwaitingHandshake.Remove(from);
-                NetworkManager.registeredOnGamemode.Add(from);
-                GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageHandshake(from, username)));
-                return;
-            }
-            Console.WriteLine("[DISCORD_LOGIN] Attempting to log in " + from);
-            byte[] bearerTokenEncrypted = message.GetBytes();
-            ulong discordId = message.GetULong();
-            // decrypt token
-            string bearerToken = Encoding.ASCII.GetString(Program.RSA.Decrypt(bearerTokenEncrypted, false));
-            // check agains api
-            using(HttpClient hc = new HttpClient())
-            using(HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Post, Config.DISCORD_API + "/login.php"))
-            {
-                //req.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-                req.Content = new StringContent("bearer=" + bearerToken + "&userid=" + discordId, Encoding.ASCII, "application/x-www-form-urlencoded");
-                var res = hc.Send(req);
-                var response = res.Content.ReadAsStringAsync().GetAwaiter().GetResult().Split(','); Console.WriteLine(string.Join(",", response));
-                string result = response[0], username = response[1];
-                if (result != "OK")
-                {
-                    Console.WriteLine("[DISCORD_LOGIN] Login ERROR for " + from + " (" + username + ")");
-                    NetworkManager.server!.DisconnectClient(from, Message.Create().Add("Discord authentication error.\nPlease retry"));
-                    return;
-                }
-                Console.WriteLine("[DISCORD_LOGIN] Login OK for " + from + " -> " + username);
-                NetworkManager.clientsAwaitingHandshake.Remove(from);
-                NetworkManager.registeredOnGamemode.Add(from);
-                GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageHandshake(from, username)));
-            }
+            string username = message.GetString();
+            Console.WriteLine($"Client {from} logged in as {username}");
+            NetworkManager.clientsAwaitingHandshake.Remove(from);
+            NetworkManager.registeredOnGamemode.Add(from);
+            NetworkManager.usernameDatabase[from] = username;
+            GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageHandshake(from, username)));
         }
         [MessageHandler(Packet_C2S.position)]
         public static void PositionData(ushort from, Message message)

@@ -12,26 +12,14 @@ using System.Collections.Generic;
 
 namespace KarlsonMP
 {
-
-    [HarmonyPatch(typeof(Managers), "Start")]
     public class Hook_Managers_Start
     {
-        public static bool Prefix(Managers __instance)
+        public static void Run()
         {
-            KMP_Console.Log("Detoured Managers.Start");
-            UnityEngine.Object.DontDestroyOnLoad(__instance.gameObject);
-            Time.timeScale = 1f;
-            Application.targetFrameRate = 240;
-            QualitySettings.vSyncCount = 0;
-
-            AudioListener.volume = 0;
-            AudioListener.pause = true;
-
             // load tutorial 0
             SceneManager.sceneLoaded += _scene;
-            UnityEngine.Object.Destroy(Audio.AudioManager.Instance);
+            UnityEngine.Object.Destroy(AudioManager.Instance);
             SceneManager.LoadScene("0Tutorial", LoadSceneMode.Single);
-            return false;
         }
 
         private static bool done = false;
@@ -139,9 +127,7 @@ namespace KarlsonMP
 
         private static void PostLoad()
         {
-            KillFeedGUI.AddText("Connecting to " + Loader.address + ":" + Loader.port);
-
-            NetworkManager.Connect();
+            ServerBrowser.Start();
         }
     }
 

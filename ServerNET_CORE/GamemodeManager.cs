@@ -1,5 +1,4 @@
-﻿using ServerNET_CORE;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -30,12 +29,10 @@ namespace ServerKMP
             if(Config.GAMEMODE == "FFA")
             {
                 currentGamemode = new Gamemodes.FFA.GamemodeEntry();
-                ServerStatus.SetServerStatus(3, "**Gamemode**  FFA");
             }
             else if(Config.GAMEMODE == "TDM")
             {
                 currentGamemode = new Gamemodes.TDM.GamemodeEntry();
-                ServerStatus.SetServerStatus(3, "**Gamemode**  TDM");
             }
             else
             {

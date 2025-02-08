@@ -46,9 +46,6 @@ namespace KarlsonMP
 
         public void Update()
         {
-            if(!Loader.OnLinux)
-                Loader.discord.RunCallbacks();
-
             Time.timeScale = 1f;
             PlaytimeLogic.Update();
             Inventory.Update();

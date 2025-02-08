@@ -33,12 +33,28 @@ namespace KarlsonMP
 
         public static void _onupdate()
         {
-
+            foreach(var prop in activeProps)
+            {
+                if (prop.Value.playerid == 0) continue; // prop not linked to player
+                var target = PlaytimeLogic.players.FirstOrDefault(x => x.id == prop.Value.playerid)?.player ?? null;
+                if (prop.Value.playerid == NetworkManager.client.Id) target = PlayerMovement.Instance.gameObject;
+                if (target == null) continue; // null player
+                prop.Value.go.transform.position = target.transform.position + prop.Value.posOff;
+                prop.Value.go.transform.rotation = Quaternion.Euler(target.transform.rotation.eulerAngles + prop.Value.rotOff);
+            }
         }
 
         private static GameObject PrefabIdToGameObject(int id)
         {
             if (id == 0) return KMP_PrefabManager.NewMilk();
+            if(id == 1)
+            {
+                var barrel = KMP_PrefabManager.NewBarrel();
+                UnityEngine.Object.Destroy(barrel.transform.GetChild(0).GetComponent<Barrel>());
+                UnityEngine.Object.Destroy(barrel.transform.GetChild(0).GetComponent<Object>());
+                UnityEngine.Object.Destroy(barrel.transform.GetChild(0).GetComponent<Rigidbody>());
+                return barrel;
+            }
             return new GameObject();
         }
 
