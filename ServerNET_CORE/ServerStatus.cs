@@ -11,35 +11,34 @@ namespace ServerNET_CORE
 {
     public static class ServerStatus
     {
-        /*
-**IP**                    `redline2.go.ro`
-**Players**          1/16
-**Map**                kmpmap
-**Gamemode**  FFA
-         */
         public static string[] status = new string[] { "**IP**                    `redline2.go.ro`", "**Players**          0/16", "**Map**                1Sandbox0", "**Gamemode**  FFA" };
         static DateTime lastChannelUpdate = DateTime.Now;
+        static bool isTaskActive = false;
         public static void SetServerStatus(ushort line, string msg)
         {
             if (!Config.ANNO) return;
-            lastChannelUpdate = lastChannelUpdate.AddSeconds(30);
-            if(lastChannelUpdate > DateTime.Now)
-                Console.WriteLine("[ServerStatus] Changing Status: " + msg + " (in " + Math.Ceiling((lastChannelUpdate - DateTime.Now).TotalSeconds) + "s)");
-            else
-                Console.WriteLine("[ServerStatus] Changing Status: " + msg);
+            Console.WriteLine("[ServerStatus] Changing Status: " + msg);
             status[line] = msg;
-            KMP_TaskScheduler.Schedule(() =>
+            if (!isTaskActive)
             {
-                using (HttpClient hc = new HttpClient())
-                using (HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Post, Config.DISCORD_API + "/status.php"))
+                lastChannelUpdate = lastChannelUpdate.AddSeconds(30);
+                if (lastChannelUpdate > DateTime.Now)
+                    Console.WriteLine("[ServerStatus] Changing Status in " + Math.Ceiling((lastChannelUpdate - DateTime.Now).TotalSeconds) + "s");
+                isTaskActive = true;
+                KMP_TaskScheduler.Schedule(() =>
                 {
-                    //req.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-                    req.Content = new StringContent("apikey=" + Config.API_KEY + "&status=" + HttpUtility.UrlEncode(string.Join("\\n", status)), Encoding.ASCII, "application/x-www-form-urlencoded");
-                    var res = hc.Send(req);
-                    var response = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    Console.WriteLine("[ServerStatus] " + response);
-                }
-            }, lastChannelUpdate);
+                    using (HttpClient hc = new HttpClient())
+                    using (HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Post, Config.DISCORD_API + "/status.php"))
+                    {
+                        //req.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
+                        req.Content = new StringContent("apikey=" + Config.API_KEY + "&status=" + HttpUtility.UrlEncode(string.Join("\\n", status)), Encoding.ASCII, "application/x-www-form-urlencoded");
+                        var res = hc.Send(req);
+                        var response = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                        Console.WriteLine("[ServerStatus] " + response);
+                    }
+                    isTaskActive = false;
+                }, lastChannelUpdate);
+            }
         }
 
         public static void MarkOffline()

@@ -13,10 +13,13 @@ namespace KarlsonMP
     public class BulletRenderer
     {
         public static void DrawBullet(Vector3 from, Vector3 to) => DrawBullet(from, to, Color.white);
-        public static void DrawBullet(Vector3 from, Vector3 to, Color color)
+        public static void DrawBullet(Vector3 from, Vector3 to, Color color, bool hitEffect = true)
         {
-            UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletDestroy, to, Quaternion.identity);
-            UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletHitAudio, to, Quaternion.identity);
+            if(hitEffect)
+            {
+                UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletDestroy, to, Quaternion.identity);
+                UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletHitAudio, to, Quaternion.identity);
+            }
             GameObject br = new GameObject("Bullet Renderer");
             LineRenderer lr = br.AddComponent<LineRenderer>();
             lr.material = new Material(Shader.Find("Sprites/Default"));

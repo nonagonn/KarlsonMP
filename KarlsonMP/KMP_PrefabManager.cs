@@ -287,7 +287,7 @@ namespace KarlsonMP
                     case "Glass":
                     {
                         glass = UnityEngine.Object.Instantiate(o);
-                        glass.name = "Loadson-Instance Pistol";
+                        glass.name = "Loadson-Instance Glass";
                         UnityEngine.Object.DontDestroyOnLoad(glass);
                         glass.SetActive(false);
                         break;

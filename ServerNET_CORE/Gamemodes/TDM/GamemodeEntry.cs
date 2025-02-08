@@ -24,6 +24,7 @@ namespace ServerKMP.Gamemodes.TDM
 
         public static int MaxWarmupTime = 100; // in seconds
         public static DateTime WarmupEnd;
+        public static bool TeamsAssigned = false;
 
         public override void OnStart()
         {
@@ -49,7 +50,15 @@ namespace ServerKMP.Gamemodes.TDM
                     else
                         nextTeam = Player.Team.Blue;
                 }
+                TeamsAssigned = true;
                 new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.Subtitle, "Match will start in 5 seconds!").SendToAll();
+
+                // show nametags of teammates
+
+                var red_players = GamemodeEntry.players.Where(x => x.Value.team == Player.Team.Red).Select(x => x.Key).ToList();
+                new MessageServerToClient.MessageShowNametags(true, red_players).SendToList(red_players);
+                var blue_players = GamemodeEntry.players.Where(x => x.Value.team == Player.Team.Blue).Select(x => x.Key).ToList();
+                new MessageServerToClient.MessageShowNametags(true, blue_players).SendToList(blue_players);
 
                 KMP_TaskScheduler.Schedule(() =>
                 {

@@ -27,6 +27,13 @@ namespace ServerKMP
             RSA_blob = RSA.ExportCspBlob(false);
 
             Config.LoadConfig();
+            if (Config.IGNORE_DISCORD)
+            {
+                Console.WriteLine("[DISCORD_LOGIN] Discord authentication is disabled via config.");
+                Console.WriteLine("[DISCORD_LOGIN] This means anyone can connect, leaving the server prone to hackers and attackers");
+                Console.WriteLine("[DISCORD_LOGIN] It is highly recommended that you re-enable discord authentication");
+                Console.WriteLine("[DISCORD_LOGIN] Anyone can login by sending their username as the bearer token (encrypted because of compatibility)");
+            }
             mainThread = new Thread(MainThread);
             mainThread.Start();
             ServerStatus.status[1] = "**Players**          0/" + Config.MAX_PLAYERS;

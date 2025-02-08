@@ -224,8 +224,9 @@ namespace KarlsonMP
             Vector3 from = message.GetVector3();
             Vector3 to = message.GetVector3();
             var c = message.GetVector3();
+            bool hitEffect = message.GetBool();
             Color color = new Color(c.x, c.y, c.z);
-            BulletRenderer.DrawBullet(from, to, color);
+            BulletRenderer.DrawBullet(from, to, color, hitEffect);
         }
 
         [MessageHandler(Packet_S2C.killFeed)]

@@ -41,6 +41,9 @@ namespace ServerKMP
                     case "anno":
                         ANNO = true;
                         break;
+                    case "ignore_discord":
+                        IGNORE_DISCORD = true;
+                        break;
                     default:
                         Console.WriteLine($"[ERROR] Found unknown key in config '{split[0]}'");
                         Console.WriteLine($"[ERROR] Line: '{line}'");
@@ -59,5 +62,6 @@ namespace ServerKMP
         public static string API_KEY { get; private set; } = "karlsonmp!_sex123$";
         public static ushort MAX_PLAYERS { get; private set; } = 16;
         public static bool ANNO { get; private set; } = false;
+        public static bool IGNORE_DISCORD { get; private set; } = false;
     }
 }

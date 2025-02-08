@@ -44,5 +44,12 @@ namespace ServerKMP.Gamemodes.TDM
 
             KMP_TaskScheduler.Schedule(() => StartRound(), DateTime.Now.AddSeconds(5));
         }
+
+        public static void ResetPoints()
+        {
+            pointsBlue = 0;
+            pointsRed = 0;
+            new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, "<size=30><color=blue>" + pointsBlue + "</color> <color=silver>-</color> <color=red>" + pointsRed + "</color></size>").SendToAll();
+        }
     }
 }

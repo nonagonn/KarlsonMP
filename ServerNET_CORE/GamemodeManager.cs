@@ -40,6 +40,7 @@ namespace ServerKMP
             else
             {
                 Console.WriteLine("[ERROR] Unknown gamemode " + Config.GAMEMODE);
+                return;
             }
             SafeCall(currentGamemode!.OnStart);
         }

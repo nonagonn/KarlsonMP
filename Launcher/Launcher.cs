@@ -1,5 +1,4 @@
-﻿using Discord;
-using MInject;
+﻿using MInject;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace Launcher
 {
@@ -31,30 +29,23 @@ namespace Launcher
             InitializeComponent();
         }
 
-        private const long CLIENT_ID = 747409309918429295;
-
         private void Launcher_Load(object sender, EventArgs e)
         {
             Properties.Settings.Default.Reload();
-            // check if we have discord
-            Discord.Discord discord = new Discord.Discord(CLIENT_ID, (ulong)Discord.CreateFlags.Default);
-            try
-            {
-                discord.RunCallbacks();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Discord API error\n" + ex.ToString());
-                Process.GetCurrentProcess().Kill();
-                return;
-            }
-            label1.Text = "You need Discord to use this mod";
 
+            textBox1.Text = Properties.Settings.Default.Username;
             textBox2.Text = Properties.Settings.Default.Address;
+            checkBox1.Checked = Properties.Settings.Default.Offline;
+            if (!checkBox1.Checked)
+            {
+                label1.Visible = false;
+                textBox1.Visible = false;
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            Properties.Settings.Default.Username = textBox1.Text;
             Properties.Settings.Default.Address = textBox2.Text;
             Properties.Settings.Default.Save();
             if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe")))
@@ -62,13 +53,28 @@ namespace Launcher
                 MessageBox.Show("Karlson was not detected in cwd.");
                 return;
             }
-            Process karlson = new Process
+            Process karlson;
+            if (!checkBox1.Checked)
             {
-                StartInfo = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe"))
+                karlson = new Process
                 {
-                    Arguments = '"' + textBox2.Text + '"'
-                }
-            };
+                    StartInfo = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe"))
+                    {
+                        Arguments = '"' + textBox2.Text + '"'
+                    }
+                };
+            }
+            else
+            {
+                karlson = new Process
+                {
+                    StartInfo = new ProcessStartInfo(Path.Combine(Directory.GetCurrentDirectory(), "Karlson.exe"))
+                    {
+                        Arguments = $"linux \"{textBox2.Text}\" \"{textBox1.Text}\" 0"
+                    }
+                };
+            }
+            
             karlson.Start();
             while (karlson.MainWindowHandle == IntPtr.Zero) Thread.Sleep(0);
             PostMessage(karlson.MainWindowHandle, WM_KEYDOWN, 0xD, 0); // enter key
@@ -106,6 +112,14 @@ namespace Launcher
 
         private void Launcher_FormClosing(object sender, FormClosingEventArgs e)
         {
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            label1.Visible = checkBox1.Checked;
+            textBox1.Visible = checkBox1.Checked;
+            Properties.Settings.Default.Offline = checkBox1.Checked;
+            Properties.Settings.Default.Save();
         }
     }
 }

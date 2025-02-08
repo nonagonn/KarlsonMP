@@ -114,7 +114,6 @@ namespace KarlsonMP
             }
 
             SceneManager.sceneLoaded -= LoadLevelData;
-            GameObject.Find("Managers (1)/UI/Game/Timer").SetActive(false);
             ClientSend.RequestScene();
         }
 

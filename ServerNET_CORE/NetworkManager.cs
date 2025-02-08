@@ -17,12 +17,12 @@ namespace ServerKMP
     {
         public static Server? server;
         public static int CurrentTick { get; private set; } = 0;
-        public static HashSet<int> clientsAwaitingHandshake = new HashSet<int>(); // players that need to send handshake
-        public static HashSet<int> registeredOnGamemode = new HashSet<int>(); // players that were sent to gamemode to be processed via C2S handshake
+        public static HashSet<ushort> clientsAwaitingHandshake = new HashSet<ushort>(); // players that need to send handshake
+        public static HashSet<ushort> registeredOnGamemode = new HashSet<ushort>(); // players that were sent to gamemode to be processed via C2S handshake
 
         public static void Start()
         {
-            Console.WriteLine($"Starting server (port {Config.PORT}, 16 max clients)");
+            Console.WriteLine($"Starting server (port {Config.PORT}, {Config.MAX_PLAYERS} max clients)");
             RiptideLogger.Initialize(Console.WriteLine, false);
             server = new Server(new Riptide.Transports.Udp.UdpServer(Riptide.Transports.Udp.SocketMode.IPv4Only), "Riptide");
             //server = new Server("Riptide");
@@ -109,6 +109,17 @@ namespace ServerKMP
         [MessageHandler(Packet_C2S.handshake)]
         public static void Handshake(ushort from, Message message)
         {
+            if(Config.IGNORE_DISCORD)
+            {
+                byte[] usernameEncrypted = message.GetBytes();
+                // decrypt token
+                string username = Encoding.ASCII.GetString(Program.RSA.Decrypt(usernameEncrypted, false));
+                Console.WriteLine("[DISCORD_LOGIN] Setting username " + username);
+                NetworkManager.clientsAwaitingHandshake.Remove(from);
+                NetworkManager.registeredOnGamemode.Add(from);
+                GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageHandshake(from, username)));
+                return;
+            }
             Console.WriteLine("[DISCORD_LOGIN] Attempting to log in " + from);
             byte[] bearerTokenEncrypted = message.GetBytes();
             ulong discordId = message.GetULong();

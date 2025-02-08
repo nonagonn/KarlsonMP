@@ -29,6 +29,24 @@ namespace ServerKMP.Gamemodes.TDM
             GamemodeEntry.UpdateScoreboard();
 
             new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.BottomLeft, "KarlsonMP / Team DeathMatch").Send(handshake.fromId);
+
+            // check if game started to assign team
+            if(GamemodeEntry.TeamsAssigned)
+            {
+                int count_red = GamemodeEntry.players.Count(x => x.Value.team == Player.Team.Red);
+                int count_blue = GamemodeEntry.players.Count(x => x.Value.team == Player.Team.Blue);
+                if(count_red < count_blue)
+                    GamemodeEntry.players[handshake.fromId].ChangeTeam(Player.Team.Red);
+                else
+                    GamemodeEntry.players[handshake.fromId].ChangeTeam(Player.Team.Blue);
+
+                if(GamemodeEntry.players.Count <= 2)
+                {
+                    // we need to restart the round
+                    RoundManager.EndRound(Player.Team.Warmup);
+                    RoundManager.ResetPoints();
+                }
+            }
         }
 
         public static void PositionData(MessageClientToServer.MessageBase_C2S _base)
@@ -45,8 +63,31 @@ namespace ServerKMP.Gamemodes.TDM
         {
             // send initial player list (also filter by id, so client is not included in list)
             new MessageServerToClient.MessageInitialPlayerList(GamemodeEntry.players.Where(x => x.Key != _base.fromId).Select(x => (x.Key, x.Value.username)).ToList()).Send(_base.fromId);
-            // teleport to spawn
-            GamemodeEntry.players[_base.fromId].TeleportToSpawn();
+            // send player colors of all other players
+            foreach(var x in GamemodeEntry.players)
+            {
+                string color = "yellow";
+                if (x.Value.team == Player.Team.Blue)
+                    color = "blue";
+                if (x.Value.team == Player.Team.Red)
+                    color = "red";
+                new MessageServerToClient.MessageColorPlayer(x.Key, color).Send(_base.fromId);
+            }
+            // hide nametags
+            new MessageServerToClient.MessageShowNametags(false).Send(_base.fromId);
+            if (GamemodeEntry.TeamsAssigned)
+            {
+                // die and specself, because game already started
+                new MessageServerToClient.MessageDied(_base.fromId).Send(_base.fromId);
+                GamemodeEntry.players[_base.fromId].EnterSpectate(_base.fromId);
+
+                // show nametags of teammates
+                var other_teammates = GamemodeEntry.players.Where(x => x.Value.team == GamemodeEntry.players[_base.fromId].team && x.Key != _base.fromId).Select(x => x.Key).ToList();
+                new MessageServerToClient.MessageShowNametags(true, other_teammates).Send(_base.fromId);
+                new MessageServerToClient.MessageShowNametags(true, new List<ushort>(new ushort[] {_base.fromId})).SendToList(other_teammates);
+            }
+            else
+                GamemodeEntry.players[_base.fromId].TeleportToSpawn();
         }
 
         public static void Shoot(MessageClientToServer.MessageBase_C2S _base)
@@ -62,7 +103,6 @@ namespace ServerKMP.Gamemodes.TDM
                 // else color is already red
             }
             // broadcast bullet to all players.
-            // 1f, 0f, 0f is red color
             new MessageServerToClient.MessageSendBullet(shoot.origin, shoot.hitPoint, color).SendToAll(shoot.fromId);
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -506,7 +506,7 @@ namespace Discord
 
         internal IntPtr MethodsPtr;
 
-        internal object MethodsStructure;
+        internal Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -613,7 +613,7 @@ namespace Discord
 
         internal IntPtr MethodsPtr;
 
-        internal object MethodsStructure;
+        internal Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -682,7 +682,7 @@ namespace Discord
 
         internal IntPtr MethodsPtr;
 
-        internal object MethodsStructure;
+        internal Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -990,7 +990,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -1348,7 +1348,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -1486,7 +1486,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -1617,7 +1617,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -1787,7 +1787,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -2022,7 +2022,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -2421,7 +2421,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -3035,7 +3035,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -3338,7 +3338,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -3634,7 +3634,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -3889,7 +3889,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -4140,7 +4140,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {
@@ -4349,7 +4349,7 @@ namespace Discord
 
         private IntPtr MethodsPtr;
 
-        private object MethodsStructure;
+        private Object MethodsStructure;
 
         private FFIMethods Methods
         {

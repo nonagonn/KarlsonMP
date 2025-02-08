@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        x:Class="KarlsonMPLauncher.MainWindow"
+        Title="KarlsonMPLauncher" CanResize="False"
+        Loaded="Window_Loaded_4">
+  <Panel>
+    <TextBox AcceptsReturn="False" Watermark="IP:Port" Height="20" VerticalAlignment="Top" x:Name="address"/>
+    <CheckBox VerticalAlignment="Top" Margin="0 30 0 0" Click="CheckBox_Click_1" x:Name="box">Username instead of discod</CheckBox>
+    <Panel Margin="0 60 0 0" IsVisible="False" x:Name="unsecured">
+      <Label>You will only be able to connect to unsecured servers.</Label>
+      <Label Margin="0 15 0 0">You will get kicked if you attempt to connect to an official server.</Label>
+      <TextBox AcceptsReturn="False" Watermark="Username" Height="20" VerticalAlignment="Top" Margin="0 40 0 0" x:Name="username"/>
+      <Button VerticalAlignment="Top" Margin="0 80 0 0" Click="Button_Click" x:Name="connect_windows2">Connect</Button>
+      <Button VerticalAlignment="Top" Margin="100 80 0 0" Click="Button_Click_2" x:Name="connect_linux2">Connect (Linux)</Button>
+    </Panel>
+    <Panel x:Name="secured">
+      <Button VerticalAlignment="Top" Margin="0 180 0 0" Click="Button_Click" x:Name="connect_windows">Connect</Button>
+      <Button VerticalAlignment="Top" Margin="100 180 0 0" Click="Button_Click_2" IsVisible="False" x:Name="connect_linux">Connect (Linux)</Button>
+      <Button VerticalAlignment="Top" Margin="250 180 0 0" Click="Button_Click_3" x:Name="link_linux">Link Discord (only for Linux)</Button>
+    </Panel>
+  </Panel>
+</Window>

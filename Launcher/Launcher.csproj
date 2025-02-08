@@ -72,9 +72,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DiscordAPI\ActivityManager.cs" />
-    <Compile Include="DiscordAPI\Constants.cs" />
-    <Compile Include="DiscordAPI\Core.cs" />
     <Compile Include="Launcher.cs">
       <SubType>Form</SubType>
     </Compile>

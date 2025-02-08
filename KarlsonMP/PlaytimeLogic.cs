@@ -5,42 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace KarlsonMP
 {
-    public class GuiWindow
-    {
-        private static int widc = 0;
-
-        public GuiWindow(string _title, int x, int y, int width, int height, Action _content, object _storage = null, bool _show = false)
-        {
-            title = _title;
-            rect = new Rect(x, y, width, height);
-            content = _content;
-            storage = _storage;
-            show = _show;
-            wid = widc++;
-        }
-
-        public object storage;
-
-        private int wid;
-        private string title;
-        private Rect rect;
-        private Action content;
-
-        public void draw()
-        {
-            if (!show) return;
-            rect = GUI.Window(wid, rect, (_) => {
-                content();
-                GUI.DragWindow();
-            }, title, MonoHooks.defaultWindow);
-        }
-        public bool show;
-    }
-
     class PlaytimeLogic
     {
         public static bool paused = false;
@@ -109,15 +76,6 @@ namespace KarlsonMP
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
-                if (pauseState < watermark.Length + 5)
-                {
-                    pauseTick++;
-                    if (pauseTick == 10)
-                    {
-                        pauseState++;
-                        pauseTick = 0;
-                    }
-                }
                 if (Input.GetKeyDown(KeyCode.BackQuote))
                     console.show = !console.show;
             }
@@ -132,6 +90,20 @@ namespace KarlsonMP
         {
             if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
                 return;
+
+            if (paused)
+            {
+                if (pauseState < watermark.Length + 5)
+                {
+                    pauseTick++;
+                    if (pauseTick == 2)
+                    {
+                        pauseState++;
+                        pauseTick = 0;
+                    }
+                }
+            }
+
             ClientSend.PositionData();
         }
 
@@ -188,45 +160,59 @@ namespace KarlsonMP
 
             settings = new GuiWindow("settings", Screen.width / 2 - 220, Screen.height / 2 - 102, 440, 205, () =>
             {
+                if(!(bool)settings.storage && GameState.Instance != null)
+                {
+                    settings_graphics = new GuiSwitch(GameState.Instance.SetGraphics, GameState.Instance.GetGraphics(), new Rect(5f, 45f, 100f, 20f), "Good", "Fast");
+                    settings_motion_blur = new GuiSwitch(GameState.Instance.SetBlur, GameState.Instance.blur, new Rect(5f, 90f, 100f, 20f), "On", "Off");
+                    settings_cam_shake = new GuiSwitch(GameState.Instance.SetShake, GameState.Instance.shake, new Rect(5f, 135f, 100f, 20f), "On", "Off");
+                    settings_sensitivity = new GuiSliderAndTextbox(GameState.Instance.SetSensitivity, GameState.Instance.GetSensitivity(), 0.1f, 3.0f, new Rect(120f, 45f, 120f, 20f), new Rect(240f, 45f, 30f, 20f));
+                    settings_volume = new GuiSliderAndTextbox(GameState.Instance.SetVolume, GameState.Instance.GetVolume(), 0f, 1f, new Rect(120f, 90f, 120f, 20f), new Rect(240f, 90f, 30f, 20f));
+                    settings_music = new GuiSliderAndTextbox(GameState.Instance.SetMusic, GameState.Instance.GetMusic(), 0f, 1f, new Rect(120f, 135f, 120f, 20f), new Rect(240f, 135f, 30f, 20f));
+                    settings_fov = new GuiSliderAndTextbox(GameState.Instance.SetFov, GameState.Instance.GetFov(), 50f, 150f, new Rect(120f, 180f, 120f, 20f), new Rect(240f, 180f, 30f, 20f));
+                    var debugInstance = UnityEngine.Object.FindObjectOfType<Debug>();
+                    settings_fps_on = new GuiReflectionCheckbox(typeof(Debug).GetField("fpsOn", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic), debugInstance, new Rect(285f, 25f, 100f, 20f), "Show FPS");
+                    settings_speed_on = new GuiReflectionCheckbox(typeof(Debug).GetField("speedOn", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic), debugInstance, new Rect(285f, 45f, 100f, 20f), "Show Speed");
+
+                    settings.storage = true;
+                }
+                if (!(bool)settings.storage)
+                    return;
+
                 if (GUI.Button(new Rect(390, 0, 50, 20), "Close", MonoHooks.defaultButton)) settings.show = false;
                 GUI.Label(new Rect(5f, 25f, 100f, 20f), "<b>Graphics</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetGraphics(GUI.Toolbar(new Rect(5f, 45f, 100f, 20f), GameState.Instance.GetGraphics() ? 0 : 1, new string[] { "Good", "Fast" }, MonoHooks.defaultToolbar) == 0);
+                settings_graphics.draw();
 
                 GUI.Label(new Rect(5f, 70f, 100f, 20f), "<b>Motion Blur</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetBlur(GUI.Toolbar(new Rect(5f, 90f, 100f, 20f), GameState.Instance.blur ? 0 : 1, new string[] { "On", "Off" }, MonoHooks.defaultToolbar) == 0);
+                settings_motion_blur.draw();
 
                 GUI.Label(new Rect(5f, 115f, 100f, 20f), "<b>Cam Shake</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetShake(GUI.Toolbar(new Rect(5f, 135f, 100f, 20f), GameState.Instance.shake ? 0 : 1, new string[] { "On", "Off" }, MonoHooks.defaultToolbar) == 0);
+                settings_cam_shake.draw();
 
                 GUI.Label(new Rect(5f, 160f, 100f, 20f), "<b>Slow-mo</b>", MonoHooks.defaultLabel);
                 GUI.Label(new Rect(5f, 180f, 100f, 20f), "Off by KMP", MonoHooks.defaultLabel);
 
                 GUI.Label(new Rect(120f, 25f, 150f, 20f), "<b>Sensitivity</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetSensitivity(GUI.HorizontalSlider(new Rect(120f, 45f, 120f, 20f), GameState.Instance.GetSensitivity(), 0.1f, 3.0f));
-                GameState.Instance.SetSensitivity(float.Parse(GUI.TextField(new Rect(240f, 45f, 30f, 20f), GameState.Instance.GetSensitivity().ToString("0.00"), MonoHooks.defaultTextArea)));
+                settings_sensitivity.draw();
 
                 GUI.Label(new Rect(120f, 70f, 150f, 20f), "<b>Volume</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetVolume(GUI.HorizontalSlider(new Rect(120f, 90f, 120f, 20f), GameState.Instance.GetVolume(), 0f, 1f));
-                GameState.Instance.SetVolume(float.Parse(GUI.TextField(new Rect(240f, 90f, 30f, 20f), GameState.Instance.GetVolume().ToString("0.00"), MonoHooks.defaultTextArea)));
+                settings_volume.draw();
 
                 GUI.Label(new Rect(120f, 115f, 150f, 20f), "<b>Music</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetMusic(GUI.HorizontalSlider(new Rect(120f, 135f, 120f, 20f), GameState.Instance.GetMusic(), 0f, 1f));
-                GameState.Instance.SetMusic(float.Parse(GUI.TextField(new Rect(240f, 135f, 30f, 20f), GameState.Instance.GetMusic().ToString("0.00"), MonoHooks.defaultTextArea)));
+                settings_music.draw();
 
                 GUI.Label(new Rect(120f, 160f, 150f, 20f), "<b>FOV</b>", MonoHooks.defaultLabel);
-                GameState.Instance.SetFov(Mathf.Floor(GUI.HorizontalSlider(new Rect(120f, 180f, 120f, 20f), GameState.Instance.GetFov(), 50f, 150f)));
-                GameState.Instance.SetFov(Mathf.Floor(float.Parse(GUI.TextField(new Rect(240f, 180f, 30f, 20f), GameState.Instance.GetFov().ToString("0"), MonoHooks.defaultTextArea))));
+                settings_fov.draw();
 
-                var fpsOn = typeof(Debug).GetField("fpsOn", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                var speedOn = typeof(Debug).GetField("speedOn", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                var ins = UnityEngine.Object.FindObjectOfType<Debug>();
-                fpsOn.SetValue(ins, GUI.Toggle(new Rect(285f, 25f, 100f, 20f), (bool)fpsOn.GetValue(ins), "Show FPS", MonoHooks.defaultToggle));
-                speedOn.SetValue(ins, GUI.Toggle(new Rect(285f, 45f, 100f, 20f), (bool)speedOn.GetValue(ins), "Show Speed", MonoHooks.defaultToggle));
+                settings_fps_on.draw();
+                settings_speed_on.draw();
                 showDebug = GUI.Toggle(new Rect(285f, 65f, 130f, 20f), showDebug, "Show RTT (ping)", MonoHooks.defaultToggle);
-            });
+            }, false);
         }
 
         static GuiWindow settings, console;
+        static GuiSwitch settings_graphics, settings_motion_blur, settings_cam_shake;
+        static GuiSliderAndTextbox settings_sensitivity, settings_volume, settings_music, settings_fov;
+        static GuiReflectionCheckbox settings_fps_on, settings_speed_on;
 
         public static void OnGUI()
         {

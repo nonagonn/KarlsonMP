@@ -80,7 +80,6 @@ namespace KarlsonMP
                     }
                 }
 
-                GameObject.Find("Managers (1)/UI/Game/Timer").SetActive(false);
                 ClientSend.RequestScene();
                 return;
             }
@@ -152,7 +151,7 @@ namespace KarlsonMP
     {
         public static bool Prefix(bool ___fpsOn, bool ___speedOn, TextMeshProUGUI ___fps, ref float ___deltaTime)
         {
-            if (___fpsOn || ___fpsOn)
+            if (___fpsOn || ___speedOn)
             {
                 if (!___fps.gameObject.activeInHierarchy) ___fps.gameObject.SetActive(true);
                 ___deltaTime += (Time.unscaledDeltaTime - ___deltaTime) * 0.1f;
@@ -192,6 +191,17 @@ namespace KarlsonMP
                 __instance.console.gameObject.SetActive(false);
                 PlayerMovement.Instance.paused = false;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Timer), "Update")]
+    public class Hook_Timer_Update
+    {
+        // for some reason on ML the timer remains active.
+        public static void Postfix(TextMeshProUGUI ___text)
+        {
+            if(___text.gameObject.activeSelf)
+                ___text.gameObject.SetActive(false);
         }
     }
 

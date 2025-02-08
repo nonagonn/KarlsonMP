@@ -1,4 +1,5 @@
 ﻿using Riptide;
+using Riptide.Transports;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -91,12 +92,25 @@ namespace ServerKMP.GamemodeApi
             }
             public MessageBase_S2C SendToAll()
             {
-                NetworkManager.server!.SendToAll(RiptideMessage);
+                // send only to those who passed handshake
+                foreach (ushort id in NetworkManager.registeredOnGamemode)
+                    NetworkManager.server!.Send(RiptideMessage, id);
                 return this;
             }
             public MessageBase_S2C SendToAll(ushort client)
             {
-                NetworkManager.server!.SendToAll(RiptideMessage, client);
+                // send only to those who passed handshake
+                foreach (ushort id in NetworkManager.registeredOnGamemode)
+                {
+                    if (id == client) continue;
+                    NetworkManager.server!.Send(RiptideMessage, id);
+                }
+                return this;
+            }
+            public MessageBase_S2C SendToList(List<ushort> clients)
+            {
+                foreach (ushort id in clients)
+                    NetworkManager.server!.Send(RiptideMessage, id);
                 return this;
             }
         }
@@ -174,10 +188,10 @@ namespace ServerKMP.GamemodeApi
         }
         public class MessageSendBullet : MessageBase_S2C
         {
-            public MessageSendBullet(Vector3 from, Vector3 to, Vector3 bulletColor)
+            public MessageSendBullet(Vector3 from, Vector3 to, Vector3 bulletColor, bool hitEffect = true)
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.bullet);
-                RiptideMessage.Add(from).Add(to).Add(bulletColor);
+                RiptideMessage.Add(from).Add(to).Add(bulletColor).Add(hitEffect);
             }
         }
         public class MessageKillFeed : MessageBase_S2C
