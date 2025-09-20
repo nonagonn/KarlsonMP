@@ -164,7 +164,7 @@ namespace Race
             => Pickup((MessageClientToServer.MessagePickup)_base);
         public static void Pickup(MessageClientToServer.MessagePickup pickup)
         {
-            new MessageServerToClient.MessageChatMessage($"<color=yellow>* {GamemodeEntry.players[pickup.fromId].username} finished the level in {FormatTime((int)(DateTime.Now - GamemodeEntry.players[pickup.fromId].lastTimeInZone).TotalMilliseconds)}.</color>").SendToAll();
+            new MessageServerToClient.MessageChatMessage($"<color=yellow><b>»</b> <b>{GamemodeEntry.players[pickup.fromId].username}</b> finished the level in {FormatTime((int)(DateTime.Now - GamemodeEntry.players[pickup.fromId].lastTimeInZone).TotalMilliseconds)}.</color>").SendToAll();
             GamemodeEntry.players[pickup.fromId].RespawnPlayer();
             GamemodeEntry.players[pickup.fromId].score++;
             GamemodeEntry.UpdateScoreboard();

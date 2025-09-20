@@ -34,8 +34,7 @@ namespace KarlsonMP
             paused = toggle;
             pauseTick = 0;
             pauseState = 0;
-            if (!toggle)
-                chatOpened = false;
+            chatOpened = false;
         }
 
         public static void Update()
@@ -159,12 +158,15 @@ namespace KarlsonMP
         private static bool chatOpened = false;
         private static string chatContent = "";
         private static string chat = "Press <b>Y</b> or <b>Enter</b> to chat.";
+        static string chat_stripped = "Press <b>Y</b> or <b>Enter</b> to chat.";
         public static void AddChat(string msg)
         {
             chat += "\n" + msg;
             while(chat.Split('\n').Length > 15)
                 chat = chat.Substring(chat.IndexOf("\n") + 1);
+            chat_stripped = StripColor(chat);
         }
+        public static void ClearChat() => chat = chat_stripped = "";
 
         private static Texture2D hpBar_black, hpBar_green;
         private static GUIStyle nameStyle;
@@ -267,6 +269,17 @@ namespace KarlsonMP
         static GuiSliderAndTextbox settings_sensitivity, settings_volume, settings_music, settings_fov;
         static GuiReflectionCheckbox settings_fps_on, settings_speed_on;
 
+        static string StripColor(string s)
+        {
+            while(s.Contains("<color"))
+            {
+                int idx = s.IndexOf("<color");
+                int close = s.IndexOf('>', idx);
+                s = s.Substring(0, idx) + s.Substring(close + 1);
+            }
+            return s.Replace("</color>", "");
+        }
+
         public static void OnGUI()
         {
             if (!ClientHandle.PlayerList) return;
@@ -299,11 +312,18 @@ namespace KarlsonMP
                 GUI.Label(new Rect(Screen.width - 78f, Screen.height - 35f, 100f, 20f), $"<color=white>RTT: {NetworkManager.client.SmoothRTT}</color>");
 
             // chat
-            GUI.Label(new Rect(5f, 20f, 500f, 250f), chat);
-            if(chatOpened)
+            var sz = GUI.skin.label.CalcSize(new GUIContent(chat));
+            for (int i = -2; i <= 2; i++)
+                for(int j = -2; j <= 2; j++)
+                {
+                    if(i == 0 && j == 0) continue;
+                    GUI.Label(new Rect(5 + i, 25 + j, sz.x + 10, sz.y + 10), "<color=black>" + chat_stripped + "</color>");
+                }
+            GUI.Label(new Rect(5f, 25f, sz.x + 10, sz.y + 10), chat);
+            if (chatOpened)
             {
                 GUI.SetNextControlName("chatcontrol");
-                chatContent = GUI.TextArea(new Rect(0f, 260f, 500f, 20f), chatContent);
+                chatContent = GUI.TextArea(new Rect(0f, Math.Max(30f + sz.y, 265f), 500f, 20f), chatContent);
                 GUI.FocusControl("chatcontrol");
                 if(chatContent.Contains('\n'))
                 {

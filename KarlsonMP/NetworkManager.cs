@@ -41,7 +41,7 @@ namespace KarlsonMP
 
         private static void FailedToConnect(object sender, ConnectionFailedEventArgs e)
         {
-            MonoHooks.ShowDialog("KarlsonMP reborn", "Failed to connect to the server", "Ok", "", () => { });
+            MonoHooks.ShowDialog("KarlsonMP reborn", "Failed to connect to the server", "Go to browser", "Exit game", () => { PlaytimeLogic.DisconnectToBrowser(); }, () => { Application.Quit(); });
         }
 
         private static void DidDisconnect(object sender, DisconnectedEventArgs e)
@@ -167,6 +167,8 @@ namespace KarlsonMP
         [MessageHandler(Packet_S2C.handshake)]
         public static void Handshake(Message message)
         {
+            if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
+                return; // we shouldn't handle this packet
             string motd = message.GetString();
             KillFeedGUI.AddText("Connected to " + motd);
             ClientSend.Handshake(NetworkManager.username);

@@ -29,7 +29,7 @@ namespace FFA
                 return;
             }
             // check for username collision
-            if (GamemodeEntry.players.Any(x => x.Value.username.ToLower() == handshake.username.ToLower()))
+            if (GamemodeEntry.players.Any(x => NetworkManager.usernameDatabase[x.Key].ToLower() == handshake.username.ToLower()))
             {
                 NetManager.KickClient(handshake.fromId, "Someone else is already using that username.");
                 return;
@@ -63,7 +63,7 @@ namespace FFA
         public static void RequestScene(MessageClientToServer.MessageBase_C2S _base)
         {
             // send initial player list (also filter by id, so client is not included in list)
-            new MessageServerToClient.MessageInitialPlayerList(GamemodeEntry.players.Where(x => x.Key != _base.fromId).Select(x => (x.Key, x.Value.username)).ToList()).Send(_base.fromId);
+            new MessageServerToClient.MessageInitialPlayerList(GamemodeEntry.players.Where(x => x.Key != _base.fromId).Select(x => (x.Key, NetworkManager.usernameDatabase[x.Key])).ToList()).Send(_base.fromId);
 
             GamemodeEntry.players[_base.fromId].RespawnPlayer();
         }

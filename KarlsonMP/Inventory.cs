@@ -214,6 +214,7 @@ namespace KarlsonMP
                 SwitchWeapon(0);
             else
             {
+                CurrentWeapon = 0;
                 // de-init weapons
                 PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("hasGun", false);
                 PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet<GameObject>("gun", null);

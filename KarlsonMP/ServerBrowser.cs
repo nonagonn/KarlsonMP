@@ -20,6 +20,11 @@ namespace KarlsonMP
         public static void Destroy()
         {
             UnityEngine.Object.Destroy(go);
+            if (ServerBrowserBehaviour.QueryClient != null)
+            {
+                ServerBrowserBehaviour.QueryClient.Disconnect();
+                ServerBrowserBehaviour.QueryClient = null;
+            }
         }
     }
 
@@ -82,6 +87,32 @@ namespace KarlsonMP
         bool addServer = false;
         string sbAddr = "";
 
+        Dictionary<string, (string, ushort, ushort)> ServerQueryCache = new Dictionary<string, (string, ushort, ushort)>();
+        public static Riptide.Client QueryClient;
+        string QueryServerAddr;
+        void QueryServer(string addr)
+        {
+            if (QueryClient != null) return; // already querying a server
+            QueryServerAddr = addr;
+            QueryClient = new Riptide.Client("QueryClient");
+            QueryClient.Connect(Loader.ToIPAddress(addr.Split(':')[0]).ToString() + ':' + addr.Split(':')[1]);
+            QueryClient.MessageReceived += QueryClient_MessageReceived;
+            QueryClient.ConnectionFailed += QueryClient_ConnectionFailed;
+        }
+
+        private void QueryClient_ConnectionFailed(object sender, Riptide.ConnectionFailedEventArgs e)
+        {
+            ServerQueryCache.Add(QueryServerAddr, (QueryServerAddr + " | Failed to ping server..", 0, 0));
+            QueryClient = null;
+        }
+
+        private void QueryClient_MessageReceived(object sender, Riptide.MessageReceivedEventArgs e)
+        {
+            ServerQueryCache.Add(QueryServerAddr, (e.Message.GetString(), e.Message.GetUShort(), e.Message.GetUShort()));
+            QueryClient.Disconnect();
+            QueryClient = null;
+        }
+
         public void OnGUI()
         {
             if(vAlign == null)
@@ -97,8 +128,8 @@ namespace KarlsonMP
             GUI.DrawTextureWithTexCoords(new Rect(0, 0, Screen.width, Screen.height), grayTx, new Rect(0, 0, 1, 1));
             GUI.DrawTextureWithTexCoords(new Rect(0, 0, Screen.width, 30), blackTx, new Rect(0, 0, 1, 1));
             tab = GUI.Toolbar(new Rect(5, 5, 350, 20), tab, toolbar);
-            GUI.Label(new Rect(400, 5, 100, 20), "Username:");
-            userName = GUI.TextField(new Rect(480, 5, 300, 20), userName);
+            GUI.Label(new Rect(360, 5, 100, 20), "Username");
+            userName = GUI.TextField(new Rect(425, 5, 150, 20), userName);
             if (GUI.Button(new Rect(Screen.width - 75, 5, 70, 20), "Exit")) Application.Quit();
             if(tab == 0)
             {
@@ -118,7 +149,9 @@ namespace KarlsonMP
                         sbAddr = sbAddr.Replace("\n", "");
                         if (!sbAddr.Contains(':'))
                             sbAddr += ":11337";
-                        favorites.Add(sbAddr);
+                        if(favorites.Contains(sbAddr))
+                            favorites.Remove(sbAddr); // move server to top of list
+                        favorites.Insert(0, sbAddr);
                         addServer = false;
                         SavePrefs();
                     }
@@ -150,16 +183,30 @@ namespace KarlsonMP
                 foreach(var x in serverList)
                 {
                     GUI.DrawTextureWithTexCoords(new Rect(0, 50 * i, Screen.width, 50), altTx ? listAlt : listTx, new Rect(0, 0, 1, 1));
-                    GUI.Label(new Rect(5, 50 * i, 350, 50), x, vAlign);
-                    if(GUI.Button(new Rect(0, 50 * i, Screen.width, 50), "", listBtn))
+                    if(!ServerQueryCache.ContainsKey(x))
+                    {
+                        GUI.Label(new Rect(5, 50 * i, 350, 50), x, vAlign);
+                        QueryServer(x);
+                    }
+                    else
+                    {
+                        GUI.Label(new Rect(5, 50 * i, 500, 50), ServerQueryCache[x].Item1, vAlign);
+                        GUI.Label(new Rect(510, 50 * i, 150, 50), ServerQueryCache[x].Item2 + "/" + ServerQueryCache[x].Item3, vAlign);
+                    }
+                    if (GUI.Button(new Rect(0, 50 * i, Screen.width, 50), "", listBtn))
                         selectedServer = x;
+                    ++i;
+                    altTx = !altTx;
                 }
             }
             GUI.EndScrollView();
             if(selectedServer != "")
             {
-                GUI.Label(new Rect(5, Screen.height - 30, 350, 20), selectedServer);
-                if(GUI.Button(new Rect(300, Screen.height - 30, 100, 20), "Connect"))
+                if(ServerQueryCache.ContainsKey(selectedServer))
+                    GUI.Label(new Rect(5, Screen.height - 30, 350, 20), ServerQueryCache[selectedServer].Item1);
+                else
+                    GUI.Label(new Rect(5, Screen.height - 30, 350, 20), selectedServer);
+                if (GUI.Button(new Rect(300, Screen.height - 30, 100, 20), "Connect"))
                 {
                     // add server to recent
                     if (recent.Contains(selectedServer))
@@ -171,7 +218,23 @@ namespace KarlsonMP
                     NetworkManager.Connect(Loader.ToIPAddress(hostname).ToString() + ':' + selectedServer.Split(':')[1], userName);
                     ServerBrowser.Destroy();
                 }
+                if(favorites.Contains(selectedServer) && GUI.Button(new Rect(405, Screen.height - 30, 175, 20), "Remove from Favorites"))
+                {
+                    favorites.Remove(selectedServer);
+                    SavePrefs();
+                }
+                if(!favorites.Contains(selectedServer) && GUI.Button(new Rect(405, Screen.height - 30, 175, 20), "Add to Favorites"))
+                {
+                    favorites.Add(selectedServer);
+                    SavePrefs();
+                }
             }
+        }
+
+        public void Update()
+        {
+            if (QueryClient != null)
+                QueryClient.Update();
         }
     }
 }

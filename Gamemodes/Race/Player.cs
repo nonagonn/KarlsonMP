@@ -72,7 +72,7 @@ namespace Race
         {
             admin = true;
             username = "<color=#ee4444>(A)</color> <color=#ff9494>" + username + "</color>";
-            new MessageServerToClient.MessageChatMessage($"{username} is now an admin").SendToAll();
+            new MessageServerToClient.MessageChatMessage($"<color=#c56cf5><b>»</b> {username} is now an admin</color>").SendToAll();
         }
 
         public void Destroy()

@@ -31,6 +31,9 @@ namespace Race
         {
             KMP_TaskScheduler.scheduledTasks.Clear();
             DrawZones();
+            if(!MapManager.currentMap!.isDefault)
+                ProcessMapData();
+            Config.MOTD = "KarlsonMP / Race | Map " + MapManager.currentMap!.name;
         }
         public override void OnStop()
         {
@@ -81,6 +84,29 @@ namespace Race
             public static Vector3 milk, milk_size;
             public static List<(Zone, Vector3)> teleports = new List<(Zone, Vector3)>();
         }
+        void ProcessMapData()
+        {
+            // process map zones
+            // start zone
+            var sz = MapManager.currentMap!.map_data["zones"].Where(x => x.Item1 == "start").First();
+            RaceData.startZone.from = sz.Item2 - sz.Item4 / 2;
+            RaceData.startZone.to = sz.Item2 + sz.Item4 / 2;
+            // milk
+            var milk = MapManager.currentMap.map_data["zones"].Where(x => x.Item1 == "milk").First();
+            RaceData.milk = milk.Item2;
+            RaceData.milk_size = milk.Item4;
+            // tp zones
+            RaceData.teleports.Clear();
+            if (MapManager.currentMap.map_data.ContainsKey("tp"))
+                foreach (var tpzone in MapManager.currentMap.map_data["tp"])
+                {
+                    RaceData.teleports.Add((new Zone
+                    {
+                        from = tpzone.Item2 - tpzone.Item4 / 2,
+                        to = tpzone.Item2 + tpzone.Item4 / 2,
+                    }, Vector3.Parse(tpzone.Item1)));
+                }
+        }
         public override void OnMapChange()
         {
             if (MapManager.currentMap!.isDefault) // default map, just send scene name
@@ -89,32 +115,14 @@ namespace Race
             {
                 // here we need to use the pre-implemented http server
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).SendToAll();
-                // process map zones
-                // start zone
-                var sz = MapManager.currentMap.map_data["zones"].Where(x => x.Item1 == "start").First();
-                RaceData.startZone.from = sz.Item2 - sz.Item4 / 2;
-                RaceData.startZone.to = sz.Item2 + sz.Item4 / 2;
-                // milk
-                var milk = MapManager.currentMap.map_data["zones"].Where(x => x.Item1 == "milk").First();
-                RaceData.milk = milk.Item2;
-                RaceData.milk_size = milk.Item4;
-                // tp zones
-                RaceData.teleports.Clear();
-                if(MapManager.currentMap.map_data.ContainsKey("tp"))
-                    foreach(var tpzone in MapManager.currentMap.map_data["tp"])
-                    {
-                        RaceData.teleports.Add((new Zone
-                        {
-                            from = tpzone.Item2 - tpzone.Item4 / 2,
-                            to = tpzone.Item2 + tpzone.Item4 / 2,
-                        }, Vector3.Parse(tpzone.Item1)));
-                    }
+                ProcessMapData();
             }
+            Config.MOTD = "KarlsonMP / Race | Map " + MapManager.currentMap.name;
         }
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username, 0, 0, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<size=20>Map <color=yellow>{MapManager.currentMap!.name}</color></size>", 0, 0, 0).Compile().SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username, 0, 0, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<color=#00FF00>KarlsonMP / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", 0, 0, 0).Compile().SendToAll();
         }
 
         static void DrawBox(Zone zone, Vector3 color)

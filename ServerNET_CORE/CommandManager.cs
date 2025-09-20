@@ -60,14 +60,6 @@ namespace ServerKMP
                         GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new GamemodeApi.MessageClientToServer.MessageHandshake(i, NetworkManager.usernameDatabase[i])));
                 }
             });
-            commands.Add("reload", _ =>
-            {
-                GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStop);
-                GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStart);
-                // re-handshake all players to gamemode
-                foreach (var i in NetworkManager.registeredOnGamemode)
-                    GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new GamemodeApi.MessageClientToServer.MessageHandshake(i, NetworkManager.usernameDatabase[i])));
-            });
 
             commands.Add("cmds", (_) =>
             {
