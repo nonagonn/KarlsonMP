@@ -24,6 +24,8 @@ namespace KarlsonMP
             rw.accuracy = 0f;
             pistol.transform.GetChild(0).localPosition = gunTip;
 
+            if (meshRotation == Vector3.zero || !pistol.GetComponent<MeshFilter>().mesh.isReadable)
+                return pistol;
             // rotate mesh
             var quat = Quaternion.Euler(meshRotation);
             var msh = pistol.GetComponent<MeshFilter>().mesh;

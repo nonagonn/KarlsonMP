@@ -26,19 +26,19 @@ namespace ServerKMP
 
         public static void Init()
         {
-            if(Config.GAMEMODE == "FFA")
+            if(!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", Config.GAMEMODE + ".gmf")))
             {
-                currentGamemode = new Gamemodes.FFA.GamemodeEntry();
-            }
-            else if(Config.GAMEMODE == "TDM")
-            {
-                currentGamemode = new Gamemodes.TDM.GamemodeEntry();
-            }
-            else
-            {
-                Console.WriteLine("[ERROR] Unknown gamemode " + Config.GAMEMODE);
+                Console.WriteLine("[ERROR] Couldn't find gamemode " + Config.GAMEMODE + ".gmf");
                 return;
             }
+            var asm = AppDomain.CurrentDomain.Load(File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", Config.GAMEMODE + ".gmf")));
+            var type = asm.GetTypes().Where(x => x.BaseType == typeof(GamemodeApi.Gamemode)).FirstOrDefault();
+            if(type == null)
+            {
+                Console.WriteLine("[ERROR] Couldn't find gamemode entrypoint");
+                return;
+            }
+            currentGamemode = (GamemodeApi.Gamemode)Activator.CreateInstance(type, null)!;
             SafeCall(currentGamemode!.OnStart);
         }
     }

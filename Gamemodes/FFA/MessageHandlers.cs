@@ -4,9 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static ServerKMP.GamemodeApi.MessageComponents;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace Default
+namespace FFA
 {
     public static class MessageHandlers
     {
@@ -14,12 +17,31 @@ namespace Default
             => Handshake((MessageClientToServer.MessageHandshake)_base);
         public static void Handshake(MessageClientToServer.MessageHandshake handshake)
         {
+            // check for valid username
+            if(!Regex.IsMatch(handshake.username, "^[a-zA-Z0-9_\\.]+$"))
+            {
+                NetManager.KickClient(handshake.fromId, "Invalid username. Please use only alphanumerical and '_', '.'.");
+                return;
+            }
+            if(handshake.username.Length < 3 || handshake.username.Length > 32)
+            {
+                NetManager.KickClient(handshake.fromId, "Invalid username. Username can only be 3-32 characters long.");
+                return;
+            }
+            // check for username collision
+            if (GamemodeEntry.players.Any(x => x.Value.username.ToLower() == handshake.username.ToLower()))
+            {
+                NetManager.KickClient(handshake.fromId, "Someone else is already using that username.");
+                return;
+            }
             GamemodeEntry.players.Add(handshake.fromId, new Player(handshake.fromId, handshake.username));
 
             // send playerjoin to all except client
             new MessageServerToClient.MessagePlayerJoinLeave(handshake.fromId, handshake.username).SendToAll(handshake.fromId);
+            new MessageServerToClient.MessageKillFeed($"<color=green>({handshake.fromId}) {handshake.username} connected</color>").SendToAll(handshake.fromId);
+            
             // send player current map
-            if (MapManager.currentMap.isDefault) // default map, just send scene name
+            if (MapManager.currentMap!.isDefault) // default map, just send scene name
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).Send(handshake.fromId);
             else // here we need to use the pre-implemented http server
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).Send(handshake.fromId);
@@ -42,8 +64,8 @@ namespace Default
         {
             // send initial player list (also filter by id, so client is not included in list)
             new MessageServerToClient.MessageInitialPlayerList(GamemodeEntry.players.Where(x => x.Key != _base.fromId).Select(x => (x.Key, x.Value.username)).ToList()).Send(_base.fromId);
-            // teleport to spawn
-            GamemodeEntry.players[_base.fromId].TeleportToSpawn();
+
+            GamemodeEntry.players[_base.fromId].RespawnPlayer();
         }
 
         public static void Shoot(MessageClientToServer.MessageBase_C2S _base)
@@ -68,10 +90,10 @@ namespace Default
                 if(damage.fromId != damage.victim)
                 { // if not suicide
                     GamemodeEntry.players[damage.fromId].kills++;
-                    GamemodeEntry.players[damage.fromId].score += 100;
+                    GamemodeEntry.players[damage.fromId].score++;
                 }
                 GamemodeEntry.players[damage.victim].deaths++;
-                GamemodeEntry.players[damage.victim].score -= 50;
+                GamemodeEntry.players[damage.victim].score--;
                 GamemodeEntry.UpdateScoreboard();
                 string kfMessage = $"{GamemodeEntry.players[damage.fromId].username} killed {GamemodeEntry.players[damage.victim].username}";
                 if (damage.fromId == damage.victim)
@@ -108,10 +130,75 @@ namespace Default
             // here you can add commands, like this:
             //if(chat.message.StartsWith("!")) ...
             // you will need to write your own command processor, keep that in mind
+            if(chat.message.StartsWith("!"))
+            {
+                var args = chat.message.Split(' ');
+                if (args[0] == "!rs")
+                {
+                    GamemodeEntry.players[chat.fromId].kills = GamemodeEntry.players[chat.fromId].deaths = GamemodeEntry.players[chat.fromId].score = 0;
+                    new MessageServerToClient.MessageChatMessage($"<color=yellow>* {GamemodeEntry.players[chat.fromId].username} reset their score</color>").SendToAll();
+                    GamemodeEntry.UpdateScoreboard();
+                }
+                if (args[0] == "!admin")
+                {
+                    if(GamemodeEntry.players[chat.fromId].admin)
+                    {
+                        new MessageServerToClient.MessageChatMessage("You are already an admin!").Send(chat.fromId);
+                        return;
+                    }
+                    NetManager.RequestPassword(chat.fromId, "Enter the admin password");
+                }
+                if (!GamemodeEntry.players[chat.fromId].admin) return; // not an admin, so no access to this commands
+                if (args[0] == "!map")
+                {
+                    if (args.Length == 1)
+                        new MessageServerToClient.MessageChatMessage("Usage: !map <map_name>").Send(chat.fromId);
+                    else
+                        MapManager.LoadMap(args[1]);
+                }
+                if (args[0] == "!kick")
+                {
+                    if (args.Length != 2)
+                        new MessageServerToClient.MessageChatMessage("Usage: !kick <id>").Send(chat.fromId);
+                    else
+                        NetManager.KickClient(ushort.Parse(args[1]), "Kicked by admin " + GamemodeEntry.players[chat.fromId].username);
+                }
+                if (args[0] == "!o")
+                {
+                    if (chat.message.Length < 3)
+                        new MessageServerToClient.MessageChatMessage("Usage: !o <message>").Send(chat.fromId);
+                    else
+                        new MessageServerToClient.MessageChatMessage(GamemodeEntry.players[chat.fromId].username + " has an announcment:\n<size=25><color=red>(!)</color> " + chat.message.Substring(3) + "</size>").SendToAll();
+                }
+                return;
+            }
 
             string msg = chat.message.Replace("<", "<<i></i>"); // sanitize against unwanted richtext
             Console.WriteLine($"[CHAT] {GamemodeEntry.players[chat.fromId].username} : {msg}");
             new MessageServerToClient.MessageChatMessage($"{GamemodeEntry.players[chat.fromId].username} : {msg}").SendToAll();
+        }
+
+        public static void Pickup(MessageClientToServer.MessageBase_C2S _base)
+            => Pickup((MessageClientToServer.MessagePickup)_base);
+        public static void Pickup(MessageClientToServer.MessagePickup pickup)
+        {
+            new MessageServerToClient.MessageChatMessage($"you picked up {pickup.propid}").Send(pickup.fromId);
+            new MessageServerToClient.MessageCreateDestroyProp(pickup.propid).SendToAll();
+        }
+
+        public static void Password(MessageClientToServer.MessageBase_C2S _base)
+            => Password((MessageClientToServer.MessagePassword)_base);
+        public static void Password(MessageClientToServer.MessagePassword password)
+        {
+            if(password.password != File.ReadAllText("adminpass"))
+            {
+                NetManager.KickClient(password.fromId, "Invalid admin password.");
+            }
+            else
+            {
+                GamemodeEntry.players[password.fromId].EnableAdmin();
+                GamemodeEntry.UpdateScoreboard();
+            }
         }
     }
 }

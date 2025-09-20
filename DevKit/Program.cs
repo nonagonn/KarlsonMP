@@ -12,7 +12,6 @@ namespace DevKit
     class Program
     {
         static readonly Dictionary<string, string> Download = new Dictionary<string, string> {
-            { "MInject.dll",            "https://github.com/devilExE3/MInject/releases/download/release/MInject.dll" },
             { "RiptideNetworking.dll",  "https://github.com/RiptideNetworking/Riptide/releases/download/v2.0.0/RiptideNetworking.dll" },
             { "RiptideNetworking.xml",  "https://github.com/RiptideNetworking/Riptide/releases/download/v2.0.0/RiptideNetworking.xml" },
         };

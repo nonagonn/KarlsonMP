@@ -41,26 +41,32 @@ namespace ServerKMP
                 else
                 {
                     GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStop);
-                    if (args[1] == "FFA")
+                    if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".gmf")))
                     {
-                        Console.WriteLine("Changing gamemode to FFA");
-                        GamemodeManager.currentGamemode = new Gamemodes.FFA.GamemodeEntry();
-                    }
-                    else if (args[1] == "TDM")
-                    {
-                        Console.WriteLine("Changing gamemode to TDM");
-                        GamemodeManager.currentGamemode = new Gamemodes.TDM.GamemodeEntry();
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unknown gamemde");
+                        Console.WriteLine("[ERROR] Couldn't find gamemode " + args[1] + ".gmf");
                         return;
                     }
+                    var asm = AppDomain.CurrentDomain.Load(File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".gmf")));
+                    var type = asm.GetTypes().Where(x => x.BaseType == typeof(GamemodeApi.Gamemode)).FirstOrDefault();
+                    if (type == null)
+                    {
+                        Console.WriteLine("[ERROR] Couldn't find gamemode entrypoint");
+                        return;
+                    }
+                    GamemodeManager.currentGamemode = (GamemodeApi.Gamemode)Activator.CreateInstance(type, null)!;
                     GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStart);
                     // re-handshake all players to gamemode
                     foreach (var i in NetworkManager.registeredOnGamemode)
                         GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new GamemodeApi.MessageClientToServer.MessageHandshake(i, NetworkManager.usernameDatabase[i])));
                 }
+            });
+            commands.Add("reload", _ =>
+            {
+                GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStop);
+                GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStart);
+                // re-handshake all players to gamemode
+                foreach (var i in NetworkManager.registeredOnGamemode)
+                    GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new GamemodeApi.MessageClientToServer.MessageHandshake(i, NetworkManager.usernameDatabase[i])));
             });
 
             commands.Add("cmds", (_) =>

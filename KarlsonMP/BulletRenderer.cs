@@ -12,12 +12,16 @@ namespace KarlsonMP
 {
     public class BulletRenderer
     {
-        public static void DrawBullet(Vector3 from, Vector3 to) => DrawBullet(from, to, Color.white);
         public static void DrawBullet(Vector3 from, Vector3 to, Color color, bool hitEffect = true)
         {
+            // if not in level, don't do anything yet
+            if (!ClientHandle.PlayerList) return;
             if(hitEffect)
             {
-                UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletDestroy, to, Quaternion.identity);
+                var ps = UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletDestroy, to, Quaternion.identity).GetComponent<ParticleSystem>();
+                ps.transform.rotation = Quaternion.LookRotation((from - to) / (from - to).magnitude);
+                var main = ps.main;
+                main.startColor = color;
                 UnityEngine.Object.Instantiate(PrefabManager.Instance.bulletHitAudio, to, Quaternion.identity);
             }
             GameObject br = new GameObject("Bullet Renderer");

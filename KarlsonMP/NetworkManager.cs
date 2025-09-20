@@ -16,38 +16,40 @@ namespace KarlsonMP
     {
         public static Client client;
         public static string address { get; private set; }
-        public static int port { get; private set; }
         public static string username { get; private set; }
-        public static void Connect(string _address, int _port, string _username)
+        public static void Connect(string _addr, string _username)
         {
-            address = _address;
-            port = _port;
+            address = _addr;
+            if (!address.Contains(':'))
+                address += ":11337";
             username = _username;
-            KillFeedGUI.AddText($"Connecting to {address}:{port}");
+            KillFeedGUI.AddText($"Connecting to {address}");
             RiptideLogger.Initialize(KMP_Console.Log, false);
             client = new Client("Riptide"); // logger name
-            client.Connect(address + ":" + port);
+            client.Connect(address);
             client.ConnectionFailed += FailedToConnect;
             client.Disconnected += DidDisconnect;
         }
 
         public static void Quit()
         {
+            if (client == null) return;
+            client.Disconnected -= DidDisconnect;
             if(!client.IsNotConnected)
                 client.Disconnect();
         }
 
         private static void FailedToConnect(object sender, ConnectionFailedEventArgs e)
         {
-            MonoHooks.ShowDialog("KarlsonMP reborn", "Failed to connect to the server", "Exit game", "", () => { Application.Quit(); });
+            MonoHooks.ShowDialog("KarlsonMP reborn", "Failed to connect to the server", "Ok", "", () => { });
         }
 
         private static void DidDisconnect(object sender, DisconnectedEventArgs e)
         {
             if(e.Message == null)
-                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection", "Exit game", "", () => { Application.Quit(); });
+                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection", "Go to browser", "Exit game", () => { PlaytimeLogic.DisconnectToBrowser(); }, () => { Application.Quit(); });
             else
-                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection:\n\n" + e.Message.GetString(), "Exit game", "", () => { Application.Quit(); });
+                MonoHooks.ShowDialog("KarlsonMP reborn", "Server closed the connection:\n\n" + e.Message.GetString(), "Go to browser", "Exit game", () => { PlaytimeLogic.DisconnectToBrowser(); }, () => { Application.Quit(); });
         }
     }
 
@@ -72,6 +74,11 @@ namespace KarlsonMP
         public const ushort hudMessage = 17;
         public const ushort selfBulletColor = 18; // change own bullet color
         public const ushort showNametags = 19;
+        public const ushort weapons = 20; // give/remove weapon
+        public const ushort collisions = 21;
+        public const ushort levelprop = 22; // create/destroy prop
+        public const ushort linkprop = 23; // link prop to player
+        public const ushort password = 24; // for requesting a password from player
     }
     public static class Packet_C2S
     {
@@ -81,6 +88,8 @@ namespace KarlsonMP
         public const ushort shoot = 4; // client shoot
         public const ushort damage = 5; // damage report after shoot
         public const ushort chat = 6;
+        public const ushort pickup = 7; // announce prop pickup
+        public const ushort password = 8; // for sending a password to the server
     }
 
     public class ClientSend
@@ -134,11 +143,26 @@ namespace KarlsonMP
             message.Add(msg);
             NetworkManager.client.Send(message);
         }
+
+        public static void Pickup(int propid)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.pickup);
+            message.Add(propid);
+            NetworkManager.client.Send(message);
+        }
+
+        public static void Password(byte[] pw)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.password);
+            message.Add(pw);
+            NetworkManager.client.Send(message);
+        }
     }
 
     public class ClientHandle
     {
         public static bool PlayerList { get; private set; } = false;
+        public static void ResetPlayerList() => PlayerList = false;
 
         [MessageHandler(Packet_S2C.handshake)]
         public static void Handshake(Message message)
@@ -218,12 +242,13 @@ namespace KarlsonMP
         {
             if (!PlayerList) return; // no player list yet
             ushort pid = message.GetUShort();
+            Player p = (from x in PlaytimeLogic.players where x.id == pid select x).FirstOrDefault();
+            if (p == null) return; // player doesn't exist
             Vector3 pos = message.GetVector3();
             Vector2 rot = message.GetVector2();
             bool crouching = message.GetBool();
             bool moving = message.GetBool();
             bool grounded = message.GetBool();
-            Player p = (from x in PlaytimeLogic.players where x.id == pid select x).First();
             p.Move(pos, rot);
             p.UpdateAnimations(crouching, moving, grounded);
         }
@@ -269,6 +294,8 @@ namespace KarlsonMP
             // clear old player list
             PlaytimeLogic.players.Clear();
             PlayerList = false;
+            // delete old props
+            PropManager.ClearProps();
             bool isDefault = message.GetBool();
             string mapName = message.GetString();
             KillFeedGUI.AddText($"Loading map {mapName}");
@@ -276,11 +303,15 @@ namespace KarlsonMP
             {
                 SceneManager.LoadScene(mapName);
                 Game.Instance.StartGame();
+                // start with the player dead
+                PlayerMovement.Instance.ReflectionSet("dead", true);
                 return;
             }
             ushort httpPort = message.GetUShort();
             // download map from http server
-            KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(NetworkManager.address, httpPort));
+            KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(NetworkManager.address.Split(':')[0], httpPort));
+            // start with the player dead
+            PlayerMovement.Instance.ReflectionSet("dead", true);
         }
 
         [MessageHandler(Packet_S2C.hp)]
@@ -422,6 +453,48 @@ namespace KarlsonMP
                 foreach (var p in PlaytimeLogic.players)
                     p.nametagShown = PlaytimeLogic.showNametags;
             }
+        }
+
+        [MessageHandler(Packet_S2C.weapons)]
+        public static void GiveWeapon(Message message)
+        {
+            bool remove = message.GetBool();
+            if(remove)
+            {
+                Inventory.RemoveWeapon(message.GetInt());
+                return;
+            }
+            Inventory.GiveWeapon(message.GetString(), message.GetVector3(), message.GetVector3(), message.GetVector3(), message.GetVector3(), message.GetString(), message.GetFloat(), message.GetFloat(), message.GetInt(), message.GetInt(), message.GetFloat(), message.GetFloat(), message.GetFloat(), message.GetFloat(), message.GetFloat(), message.GetFloat());
+        }
+
+        [MessageHandler(Packet_S2C.collisions)]
+        public static void Collisions(Message message)
+        {
+            bool ignore_coll = message.GetBool();
+            Physics.IgnoreLayerCollision(8, 8, ignore_coll);
+            Physics.IgnoreLayerCollision(8, 12, ignore_coll);
+        }
+
+        [MessageHandler(Packet_S2C.levelprop)]
+        public static void LevelProp(Message message)
+        {
+            bool destroy = message.GetBool();
+            if (!destroy)
+                PropManager.SpawnProp(message.GetInt(), message.GetVector3(), message.GetVector3(), message.GetVector3(), message.GetInt(), message.GetBool());
+            else
+                PropManager.DestroyProp(message.GetInt());
+        }
+
+        [MessageHandler(Packet_S2C.linkprop)]
+        public static void LinkProp(Message message)
+        {
+            PropManager.LinkPropToPlayer(message.GetInt(), message.GetUShort(), message.GetVector3(), message.GetVector3());
+        }
+
+        [MessageHandler(Packet_S2C.password)]
+        public static void Password(Message message)
+        {
+            PlaytimeLogic.PasswordDialog.Prompt(message.GetString(), message.GetBytes());
         }
     }
 }

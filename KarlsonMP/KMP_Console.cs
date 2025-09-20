@@ -14,8 +14,8 @@ namespace KarlsonMP
         {
             content += message + '\n';
             while (content.Split('\n').Length > 100) content = content.Substring(content.IndexOf("\n") + 1);
-            if(!consoleOnly)
-                File.AppendAllText(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP.log"), message + "\r\n");
+            if (!consoleOnly)
+                File.AppendAllText(Path.Combine(Loader.KMP_ROOT, $"KarlsonMP.log"), message + "\r\n");
         }
 
         public static string Content => content;

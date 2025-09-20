@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Default
+namespace FFA
 {
     public class Player
     {
@@ -18,6 +18,7 @@ namespace Default
         public int spectating = 0;
         public uint respawnTaskId;
         public bool respawnTaskActive;
+        public bool admin;
 
         public Player(ushort _id, string _username)
         {
@@ -30,6 +31,7 @@ namespace Default
             invicibleUntil = DateTime.Now;
             spectating = 0;
             respawnTaskActive = false;
+            admin = false;
         }
 
         public void SetUsername(string _username)
@@ -48,18 +50,19 @@ namespace Default
             // reset hp
             SetHP(100);
             // pick random spawn location
-            int count = MapManager.currentMap.map_data["spawn"].Count;
+            int count = MapManager.currentMap!.map_data["spawn"].Count;
             var pos = MapManager.currentMap.map_data["spawn"][new Random().Next(count)];
             invicibleUntil = DateTime.Now.AddSeconds(3);
             new MessageServerToClient.MessageRespawn(pos.Item2).Send(id);
-        }
-
-        public void TeleportToSpawn()
-        {
-            // pick random spawn location
-            int count = MapManager.currentMap.map_data["spawn"].Count;
-            var pos = MapManager.currentMap.map_data["spawn"][new Random().Next(count)];
-            new MessageServerToClient.MessageTeleport(pos.Item2, Vector2.zero, Vector3.zero).Send(id);
+            // send weapons
+            /*
+             * weapons.Add(new Weapon(ak47, new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), Vector3.zero, "smg", 0.2f, 0.15f, 20, 1, 0.01f, 0.2f, 0, 40f, 0, 0.1f));
+            weapons.Add(new Weapon(deagle, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), new Vector3(0f, 0.2f, 0.2f), "pistol", 0.3f, 0.4f, 1, 1, 0, 0.7f, 0, 100f, 0, 0));
+            weapons.Add(new Weapon(shotgun, new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, new Vector3(0f, 0.2f, 0.2f), "shotgun", 0.5f, 1, 8, 6, 0.075f, 0.5f, 7f, 40f, 50f, 1f));
+             * */
+            new MessageServerToClient.MessageGiveTakeWeapon("ak47", new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), Vector3.zero, "smg", 0.2f, 0.15f, 20, 1, 0.01f, 0.2f, 0, 40f, 0, 0.1f).Send(id);
+            new MessageServerToClient.MessageGiveTakeWeapon("deagle", new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), new Vector3(0f, 0.2f, 0.2f), "pistol", 0.3f, 0.4f, 1, 1, 0, 0.7f, 0, 100f, 0, 0).Send(id);
+            new MessageServerToClient.MessageGiveTakeWeapon("shotty", new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, new Vector3(0f, 0.2f, 0.2f), "shotgun", 0.5f, 1, 8, 6, 0.075f, 0.5f, 7f, 40f, 50f, 1f).Send(id);
         }
 
         public void EnterSpectate(ushort target)
@@ -74,6 +77,13 @@ namespace Default
         {
             new MessageServerToClient.MessageSpectate().Send(id);
             spectating = 0;
+        }
+
+        public void EnableAdmin()
+        {
+            admin = true;
+            username = "<color=#ee4444>(A)</color> <color=#ff9494>" + username + "</color>";
+            new MessageServerToClient.MessageChatMessage($"{username} is now an admin").SendToAll();
         }
 
         public void Destroy()

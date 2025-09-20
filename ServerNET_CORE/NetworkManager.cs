@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.IO;
 using ServerKMP.GamemodeApi;
 using System.Net;
+using System.Security.Cryptography;
 
 namespace ServerKMP
 {
@@ -19,6 +20,7 @@ namespace ServerKMP
         public static HashSet<ushort> clientsAwaitingHandshake = new HashSet<ushort>(); // players that need to send handshake
         public static HashSet<ushort> registeredOnGamemode = new HashSet<ushort>(); // players that were sent to gamemode to be processed via C2S handshake
         public static Dictionary<ushort, string> usernameDatabase = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, RSACryptoServiceProvider> passwordEncryption = new Dictionary<ushort, RSACryptoServiceProvider>();
 
         public static void Start()
         {
@@ -34,7 +36,7 @@ namespace ServerKMP
         private static void Server_ClientConnected(object? sender, ServerConnectedEventArgs e)
         {
             Message handshake = Message.Create(MessageSendMode.Reliable, Packet_S2C.handshake);
-            handshake.Add("<MOTD>");
+            handshake.Add(Config.MOTD).Add((ushort)registeredOnGamemode.Count).Add(server!.MaxClientCount);
             server!.Send(handshake, e.Client);
             clientsAwaitingHandshake.Add(e.Client.Id);
             KMP_TaskScheduler.Schedule(() =>
@@ -89,6 +91,11 @@ namespace ServerKMP
         public const ushort hudMessage = 17;
         public const ushort selfBulletColor = 18; // change own bullet color
         public const ushort showNametags = 19;
+        public const ushort weapons = 20; // give/take weapon
+        public const ushort collisions = 21;
+        public const ushort levelprop = 22;
+        public const ushort linkprop = 23;
+        public const ushort password = 24;
     }
     public static class Packet_C2S
     {
@@ -98,6 +105,8 @@ namespace ServerKMP
         public const ushort shoot = 4; // client shoot
         public const ushort damage = 5; // damage report after shoot
         public const ushort chat = 6;
+        public const ushort pickup = 7;
+        public const ushort password = 8;
     }
 
     public class ServerHandle
@@ -128,5 +137,25 @@ namespace ServerKMP
         [MessageHandler(Packet_C2S.chat)]
         public static void Chat(ushort from, Message message)
             => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageChat(from, message)));
+        [MessageHandler(Packet_C2S.pickup)]
+        public static void Pickup(ushort from, Message message)
+            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessagePickup(from, message)));
+        [MessageHandler(Packet_C2S.password)]
+        public static void Password(ushort from, Message message)
+        {
+            byte[] pw_enc = message.GetBytes();
+            if(pw_enc.Length == 0)
+            {
+                NetworkManager.passwordEncryption[from].Dispose();
+                NetworkManager.passwordEncryption.Remove(from);
+                GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessagePassword(from, "")));
+                return;
+            }
+            // decrypt password
+            var rsa = NetworkManager.passwordEncryption[from];
+            GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessagePassword(from, Encoding.UTF8.GetString(rsa.Decrypt(pw_enc, false)))));
+            rsa.Dispose();
+            NetworkManager.passwordEncryption.Remove(from);
+        }
     }
 }

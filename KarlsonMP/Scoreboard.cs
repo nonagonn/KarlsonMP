@@ -21,6 +21,7 @@ namespace KarlsonMP
         }
 
         private static Texture2D _grayTx, _blackTx;
+        private static GUIStyle hAlign = null;
 
         public static void GuiCtor()
         {
@@ -41,14 +42,21 @@ namespace KarlsonMP
         public static void OnGUI()
         {
             if(!scoreboardOpened) return;
+            if(hAlign == null)
+            {
+                hAlign = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleLeft
+                };
+            }
             // scoreboard header
             float width = 500f, basex = (Screen.width - width) / 2f, basey = 100f;
             GUI.DrawTexture(new Rect(basex, basey, width, 30f), _blackTx);
-            GUI.Label(new Rect(basex + 5f, basey + 5f, 20f, 30f), "ID", MonoHooks.defaultLabel);
-            GUI.Label(new Rect(basex + 50f, basey + 5f, 300f, 30f), "Username", MonoHooks.defaultLabel);
-            GUI.Label(new Rect(basex + 300f, basey + 5f, 100f, 30f), "Kills", MonoHooks.defaultLabel);
-            GUI.Label(new Rect(basex + 350f, basey + 5f, 100f, 30f), "Deaths", MonoHooks.defaultLabel);
-            GUI.Label(new Rect(basex + 400f, basey + 5f, 100f, 30f), "Score", MonoHooks.defaultLabel);
+            GUI.Label(new Rect(basex + 5f, basey, 50f, 30f), "ID", hAlign);
+            GUI.Label(new Rect(basex + 60f, basey, 300f, 30f), "Username", hAlign);
+            GUI.Label(new Rect(basex + 350f, basey, 100f, 30f), "Kills", hAlign);
+            GUI.Label(new Rect(basex + 400f, basey, 100f, 30f), "Deaths", hAlign);
+            GUI.Label(new Rect(basex + 450f, basey, 100f, 30f), "Score", hAlign);
             float yOff = 30f;
             bool alt = true;
             foreach(var score in entries)
@@ -58,11 +66,14 @@ namespace KarlsonMP
                 else
                     GUI.DrawTexture(new Rect(basex, basey + yOff, width, 30f), _blackTx);
                 alt = !alt;
-                GUI.Label(new Rect(basex + 5f, basey + yOff + 5f, 20f, 30f), score.id.ToString(), MonoHooks.defaultLabel);
-                GUI.Label(new Rect(basex + 50f, basey + yOff + 5f, 300f, 30f), score.name, MonoHooks.defaultLabel);
-                GUI.Label(new Rect(basex + 300f, basey + yOff + 5f, 100f, 30f), score.kills.ToString(), MonoHooks.defaultLabel);
-                GUI.Label(new Rect(basex + 350f, basey + yOff + 5f, 100f, 30f), score.deaths.ToString(), MonoHooks.defaultLabel);
-                GUI.Label(new Rect(basex + 400f, basey + yOff + 5f, 100f, 30f), score.score.ToString(), MonoHooks.defaultLabel);
+                if(score.id != ushort.MaxValue)
+                {
+                    GUI.Label(new Rect(basex + 5f, basey + yOff, 50f, 30f), score.id.ToString(), hAlign);
+                    GUI.Label(new Rect(basex + 350f, basey + yOff, 100f, 30f), score.kills.ToString(), hAlign);
+                    GUI.Label(new Rect(basex + 400f, basey + yOff, 100f, 30f), score.deaths.ToString(), hAlign);
+                    GUI.Label(new Rect(basex + 450f, basey + yOff, 100f, 30f), score.score.ToString(), hAlign);
+                }
+                GUI.Label(new Rect(basex + 60f, basey + yOff, 300f, 30f), score.name, hAlign);
                 yOff += 30f;
             }
         }

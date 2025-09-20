@@ -36,7 +36,7 @@ namespace KarlsonMP
             rect = GUI.Window(wid, rect, (_) => {
                 content();
                 GUI.DragWindow();
-            }, title, MonoHooks.defaultWindow);
+            }, title);
         }
         public bool show;
     }
@@ -69,7 +69,7 @@ namespace KarlsonMP
                 textboxValue = value.ToString("0.00");
             }
             string oldTextboxValue = textboxValue;
-            textboxValue = GUI.TextField(textboxPos, textboxValue, MonoHooks.defaultTextArea);
+            textboxValue = GUI.TextField(textboxPos, textboxValue);
             if (textboxValue != oldTextboxValue)
             {
                 value = float.Parse(textboxValue);
@@ -96,7 +96,7 @@ namespace KarlsonMP
         public void draw()
         {
             bool oldValue = value;
-            value = GUI.Toolbar(pos, value ? 0 : 1, options, MonoHooks.defaultToolbar) == 0;
+            value = GUI.Toolbar(pos, value ? 0 : 1, options) == 0;
             if (value != oldValue)
                 targetField(value);
         }
@@ -122,7 +122,7 @@ namespace KarlsonMP
         public void draw()
         {
             bool oldValue = value;
-            value = GUI.Toggle(pos, value, text, MonoHooks.defaultToggle);
+            value = GUI.Toggle(pos, value, text);
             if(value != oldValue)
                 field.SetValue(field_instance, value);
         }

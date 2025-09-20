@@ -14,17 +14,17 @@ namespace KarlsonMP
         public static string subtitle;
         public static string bottomLeft;
 
+        public static void ClearMessages() => topCenter = aboveCrosshair = subtitle = bottomLeft = "";
+
         private static GUIStyle _center, _lowerLeft;
         public static void GuiCtor()
         {
             _center = new GUIStyle();
             _center.normal.textColor = Color.white;
-            _center.font = MonoHooks.arialFont;
             _center.alignment = TextAnchor.UpperCenter;
 
             _lowerLeft = new GUIStyle();
             _lowerLeft.normal.textColor = Color.white;
-            _lowerLeft.font = MonoHooks.arialFont;
             _lowerLeft.alignment = TextAnchor.LowerLeft;
         }
 

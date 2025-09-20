@@ -13,8 +13,8 @@ namespace ServerKMP
 
         public static void Init()
         {
-            defaultMaps.Add(new Map("1Sandbox0", new Dictionary<string, List<(string, Vector3, Vector3)>> {
-                { "spawn", new List<(string, Vector3, Vector3)>() { ("spawn", new Vector3(0f, 0f, -50f), Vector3.zero) }
+            defaultMaps.Add(new Map("1Sandbox0", new Dictionary<string, List<(string, Vector3, Vector3, Vector3)>> {
+                { "spawn", new List<(string, Vector3, Vector3, Vector3)>() { ("spawn", new Vector3(0f, 0f, -50f), Vector3.zero, Vector3.zero) }
                 } }, true));
             Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Maps"));
             currentMap = defaultMaps[0];
@@ -38,7 +38,7 @@ namespace ServerKMP
                 else
                 {
                     // load metadata
-                    Dictionary<string, List<(string, Vector3, Vector3)>> map_data = new Dictionary<string, List<(string, Vector3, Vector3)>>();
+                    Dictionary<string, List<(string, Vector3, Vector3, Vector3)>> map_data = new Dictionary<string, List<(string, Vector3, Vector3, Vector3)>>();
                     using(FileStream fs = File.OpenRead(Path.Combine(Directory.GetCurrentDirectory(), "Maps", mapName + ".kme_data")))
                     using(BinaryReader br = new BinaryReader(fs))
                     {
@@ -47,9 +47,9 @@ namespace ServerKMP
                         {
                             string keyName = br.ReadString();
                             int keyCount = br.ReadInt32();
-                            List<(string, Vector3, Vector3)> values = new List<(string, Vector3, Vector3)>();
+                            List<(string, Vector3, Vector3, Vector3)> values = new List<(string, Vector3, Vector3, Vector3)>();
                             while(keyCount-- > 0)
-                                values.Add((br.ReadString(), br.ReadVector3(), br.ReadVector3()));
+                                values.Add((br.ReadString(), br.ReadVector3(), br.ReadVector3(), br.ReadVector3()));
                             map_data.Add(keyName, values);
                         }
                     }
@@ -65,9 +65,9 @@ namespace ServerKMP
         public class Map
         {
             public string name;
-            public Dictionary<string, List<(string, Vector3, Vector3)>> map_data;
+            public Dictionary<string, List<(string, Vector3, Vector3, Vector3)>> map_data;
             public bool isDefault = false;
-            public Map(string name, Dictionary<string, List<(string, Vector3, Vector3)>> map_data, bool isDefault)
+            public Map(string name, Dictionary<string, List<(string, Vector3, Vector3, Vector3)>> map_data, bool isDefault)
             {
                 this.name = name;
                 this.map_data = map_data;

@@ -19,7 +19,6 @@ namespace KarlsonMP
             {
                 var source = AudioManager.Instance.gameObject.AddComponent<AudioSource>();
                 var clip = bundle.LoadAsset<AudioClip>("assets/karlsonmp/sfx/" + c + ".mp3");
-                KMP_Console.Log(clip.name);
                 source.clip = clip;
                 source.loop = false;
                 source.volume = 1f;

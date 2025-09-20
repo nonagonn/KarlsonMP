@@ -27,8 +27,19 @@ namespace KarlsonMP
 
         public static void DestroyProp(int id)
         {
+            KMP_Console.Log("destroy prop id " + id);
             UnityEngine.Object.Destroy(activeProps[id].go);
             activeProps.Remove(id);
+        }
+
+        public static void ClearProps()
+        {
+            foreach (var x in activeProps)
+            {
+                if (x.Value.go)
+                    UnityEngine.Object.Destroy(x.Value.go);
+            }
+            activeProps.Clear();
         }
 
         public static void _onupdate()
@@ -47,7 +58,7 @@ namespace KarlsonMP
         private static GameObject PrefabIdToGameObject(int id)
         {
             if (id == 0) return KMP_PrefabManager.NewMilk();
-            if(id == 1)
+            if (id == 1)
             {
                 var barrel = KMP_PrefabManager.NewBarrel();
                 UnityEngine.Object.Destroy(barrel.transform.GetChild(0).GetComponent<Barrel>());

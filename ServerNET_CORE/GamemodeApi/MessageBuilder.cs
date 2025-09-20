@@ -3,6 +3,7 @@ using Riptide.Transports;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -280,7 +281,7 @@ namespace ServerKMP.GamemodeApi
             public MessageUpdateScoreboard(List<(ushort, string, int, int, int)> entries)
             {
                 pushList = entries;
-                Compile();
+                compiled = false;
             }
             public MessageUpdateScoreboard()
             {
@@ -372,6 +373,111 @@ namespace ServerKMP.GamemodeApi
                     RiptideMessage.Add(u);
             }
         }
+        public class MessageGiveTakeWeapon : MessageBase_S2C
+        {
+            /// <summary>
+            /// Remove weapon from player
+            /// </summary>
+            /// <param name="slot">inventory slot id</param>
+            public MessageGiveTakeWeapon(int slot)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.weapons);
+                RiptideMessage.Add(true);
+                RiptideMessage.Add(slot);
+            }
+            /// <summary>
+            /// Give weapon to player
+            /// </summary>
+            /// <param name="model">model name</param>
+            /// <param name="localScale">scale</param>
+            /// <param name="meshRotation">mesh rotation</param>
+            /// <param name="gunTip">gun tip</param>
+            /// <param name="viewOffset">view offset</param>
+            /// <param name="soundName">shooting sound</param>
+            /// <param name="recoil">recoil</param>
+            /// <param name="attackSpeed">attack speed</param>
+            /// <param name="magazine">max bullets in mag</param>
+            /// <param name="bulletCount">bullets per shot</param>
+            /// <param name="spread">bullet spread</param>
+            /// <param name="cooldown">shooting cooldown</param>
+            /// <param name="boostRecoil">shotgun recoil</param>
+            /// <param name="maxDamage">[DMG] Maximum damage</param>
+            /// <param name="damageDropoff">[DMG] Distance after which damage is 0</param>
+            /// <param name="damageScaleByDist">[DMG] Scailing factor for damage by distance</param>
+            public MessageGiveTakeWeapon(string model, Vector3 localScale, Vector3 meshRotation, Vector3 gunTip, Vector3 viewOffset, string soundName, float recoil, float attackSpeed, int magazine, int bulletCount, float spread, float cooldown, float boostRecoil, float maxDamage, float damageDropoff, float damageScaleByDist)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.weapons);
+                RiptideMessage.Add(false)
+                    .Add(model).Add(localScale).Add(meshRotation).Add(gunTip).Add(viewOffset).Add(soundName).Add(recoil).Add(attackSpeed).Add(magazine).Add(bulletCount).Add(spread).Add(cooldown).Add(boostRecoil).Add(maxDamage).Add(damageDropoff).Add(damageScaleByDist);
+            }
+        }
+        public class MessageCollisions : MessageBase_S2C
+        {
+            public MessageCollisions(bool disable_collisions)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.collisions);
+                RiptideMessage.Add(disable_collisions);
+            }
+        }
+        public class MessageCreateDestroyProp : MessageBase_S2C
+        {
+            /// <summary>
+            /// Destroy prop
+            /// </summary>
+            /// <param name="id">prop id</param>
+            public MessageCreateDestroyProp(int id)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.levelprop);
+                RiptideMessage.Add(true);
+                RiptideMessage.Add(id);
+            }
+
+            /// <summary>
+            /// Create Prop
+            /// </summary>
+            /// <param name="id">prop id</param>
+            /// <param name="pos">world pos</param>
+            /// <param name="rot">rotation</param>
+            /// <param name="scale">scale</param>
+            /// <param name="prefabId">prefab id</param>
+            /// <param name="annouce_pickup">announce to server when player picks it up</param>
+            public MessageCreateDestroyProp(int id, Vector3 pos, Vector3 rot, Vector3 scale, int prefabId, bool annouce_pickup)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.levelprop);
+                RiptideMessage.Add(false)
+                    .Add(id).Add(pos).Add(rot).Add(scale).Add(prefabId).Add(annouce_pickup);
+            }
+        }
+
+        public class MessageLinkPropToPlayer : MessageBase_S2C
+        {
+            /// <summary>
+            /// Link prop to player (aka attach it to them)
+            /// </summary>
+            /// <param name="id">prop id</param>
+            /// <param name="player">player id</param>
+            /// <param name="posOffset">pos offset from player</param>
+            /// <param name="rotOffset">rot offset from player</param>
+            public MessageLinkPropToPlayer(int id, ushort player, Vector3 posOffset, Vector3 rotOffset)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.linkprop);
+                RiptideMessage.Add(id).Add(player).Add(posOffset).Add(rotOffset);
+            }
+        }
+
+        public class MessagePassword : MessageBase_S2C
+        {
+            /// <summary>
+            /// Used internally by KMP. To ask for password use <see cref="NetManager.RequestPassword(ushort, string)"/>
+            /// </summary>
+            /// <param name="prompt"></param>
+            /// <param name="cspBlob"></param>
+            public MessagePassword(string prompt, byte[] cspBlob)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.password);
+                RiptideMessage.Add(prompt).Add(cspBlob);
+            }
+        }
     }
 
     public static class MessageClientToServer
@@ -443,6 +549,40 @@ namespace ServerKMP.GamemodeApi
             {
                 message = riptideMessage.GetString();
             }
+        }
+        public class MessagePickup : MessageBase_C2S
+        {
+            public int propid;
+            public MessagePickup(ushort fromId, Message riptideMessage) : base(fromId, Packet_C2S.pickup)
+            {
+                propid = riptideMessage.GetInt();
+            }
+        }
+        public class MessagePassword : MessageBase_C2S
+        {
+            public string password;
+            public MessagePassword(ushort fromId, string pw) : base(fromId, Packet_C2S.password)
+            {
+                password = pw;
+            }
+        }
+    }
+
+    public static class NetManager
+    {
+        public static void KickClient(ushort client, string reason)
+        {
+            NetworkManager.server!.DisconnectClient(client, Message.Create().Add(reason));
+        }
+
+        public static void RequestPassword(ushort client, string prompt = "")
+        {
+            var rsa = new RSACryptoServiceProvider(1024)
+            {
+                PersistKeyInCsp = false
+            };
+            NetworkManager.passwordEncryption.Add(client, rsa);
+            new MessageServerToClient.MessagePassword(prompt, rsa.ExportCspBlob(false)).Send(client);
         }
     }
 }

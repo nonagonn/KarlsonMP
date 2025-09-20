@@ -33,7 +33,6 @@ namespace KarlsonMP
                 center = new GUIStyle();
                 center.alignment = TextAnchor.MiddleCenter;
                 center.normal.textColor = Color.white;
-                center.font = MonoHooks.arialFont;
             }
             int offY = 0;
             foreach (var item in feed)
@@ -50,7 +49,7 @@ namespace KarlsonMP
             {
                 if (item.state > 50) SetGUIOpacity((70 - item.state) / 20f);
                 else SetGUIOpacity(1f);
-                GUI.Label(new Rect(Screen.width / 2 + 10f, Screen.height / 2 + offY, 100f, 45f), "<size=25>" + item.text + "</size>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(Screen.width / 2 + 10f, Screen.height / 2 + offY, 100f, 45f), "<size=25>" + item.text + "</size>");
                 offY += 30;
             }
             SetGUIOpacity(1f);

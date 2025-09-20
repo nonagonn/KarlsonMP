@@ -12,6 +12,36 @@ namespace KarlsonMP
 {
     public class Inventory
     {
+        public class Weapon
+        {
+            public Weapon(GameObject importObject, Vector3 localScale, Vector3 meshRotation, Vector3 gunTip, Vector3 viewOffset, string soundName, float recoil, float attackSpeed, int magazine, int bulletCount, float spread, float cooldown, float boostRecoil, float maxDamage, float damageDropoff, float damageScaleByDist)
+            {
+                WeaponObject = WeaponLib.MakeGun(importObject.GetComponent<MeshFilter>().mesh, importObject.GetComponent<MeshRenderer>().materials, localScale, meshRotation, gunTip, recoil, attackSpeed);
+                WeaponObject.SetActive(false);
+                DesiredPos = viewOffset;
+                SoundName = soundName;
+
+                MaxMagazine = magazine;
+                BulletCount = bulletCount;
+                Spread = spread;
+                Cooldown = cooldown;
+                BoostRecoil = boostRecoil;
+                MaxDamage = maxDamage;
+                DamageDropoff = damageDropoff;
+                DamageScaleByDist = damageScaleByDist;
+
+                Magazine = MaxMagazine;
+            }
+            public GameObject WeaponObject;
+            public readonly string SoundName;
+            public readonly Vector3 DesiredPos;
+            public readonly int MaxMagazine, BulletCount;
+            public readonly float Spread, Cooldown, BoostRecoil, MaxDamage, DamageDropoff, DamageScaleByDist;
+            public int Magazine;
+            public float ReloadTime = 0f;
+        }
+        static List<Weapon> weapons = null;
+
         public static Color selfBulletColor = Color.blue;
 
         public static void LoadAssets(AssetBundle bundle)
@@ -25,25 +55,21 @@ namespace KarlsonMP
 
         public static void Shoot(Transform ___guntip)
         {
+            if (weapons.Count == 0) return;
             if (CurrentWeaponCooldown > 0) return; // weapon switch use cooldown
-            if (ReloadTime[CurrentWeapon] > 0) return; // currently reloading
-            if (WeaponMag[CurrentWeapon] > 0)
+            if (weapons[CurrentWeapon].ReloadTime > 0) return; // currently reloading
+            if (weapons[CurrentWeapon].Magazine > 0)
             {
                 // virtual shoot
                 Gun.Instance.Shoot();
-                if (CurrentWeapon == 0)
-                    KMP_AudioManager.PlaySound("smg", 0.15f);
-                if (CurrentWeapon == 1)
-                    KMP_AudioManager.PlaySound("pistol", 0.15f);
-                if (CurrentWeapon == 2)
-                    KMP_AudioManager.PlaySound("shotgun", 0.15f);
+                KMP_AudioManager.PlaySound(weapons[CurrentWeapon].SoundName, 0.15f);
                 // atm i don't know more abt this.. will need to reverse this code a bit more
                 Vector3 vector = ___guntip.position - ___guntip.transform.right / 4f;
                 UnityEngine.Object.Instantiate(PrefabManager.Instance.muzzle, vector, Quaternion.identity);
                 Dictionary<ushort, float> damage = new Dictionary<ushort, float>();
                 ushort victim;
                 float dmg;
-                for (int _ = 0; _ < BulletCount[CurrentWeapon]; _++)
+                for (int _ = 0; _ < weapons[CurrentWeapon].BulletCount; _++)
                 {
                     (victim, dmg) = TraceBullet(___guntip);
                     if (dmg == 0f) continue;
@@ -52,7 +78,7 @@ namespace KarlsonMP
                     damage[victim] += dmg;
                 }
                     
-                WeaponMag[CurrentWeapon]--;
+                weapons[CurrentWeapon].Magazine--;
 
                 if (damage.Count > 0)
                     Hitmarker();
@@ -64,9 +90,9 @@ namespace KarlsonMP
                     KillFeedGUI.DamageReport(((int)Mathf.Floor(x.Value + 0.5f)).ToString());
                 }
             }
-            if (WeaponMag[CurrentWeapon] == 0)
+            if (weapons[CurrentWeapon].Magazine == 0)
             {
-                ReloadTime[CurrentWeapon] = MaxReloadTime;
+                weapons[CurrentWeapon].ReloadTime = MaxReloadTime;
                 // 0.1s delay, to enjoy deagle sound
                 KMP_AudioManager.PlaySoundDelayed("reload", 0.10f, 0.08f);
             }
@@ -99,27 +125,36 @@ namespace KarlsonMP
         {
             ushort victim = 0;
             float damage = 0f;
-            PlayerMovement.Instance.GetRb().AddForce(WeaponObjects[CurrentWeapon].transform.right * BoostRecoil[CurrentWeapon], ForceMode.Impulse);
+            PlayerMovement.Instance.GetRb().AddForce(weapons[CurrentWeapon].WeaponObject.transform.right * weapons[CurrentWeapon].BoostRecoil, ForceMode.Impulse);
             // cast ray
             Vector3 gunTip = PlayerMovement.Instance.transform.Find("Head").position;
             // Player Collider, Ground, Object, Player Capsule Collider
             LayerMask hittable = (1 << 12) | (1 << 9) | (1 << 10) | (1 << 8);
             PlayerMovement.Instance.gameObject.layer = 13; // change layer to not hit our capsule
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.rotation * Vector3.forward + new Vector3(UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon]), UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon]), UnityEngine.Random.Range(-WeaponSpread[CurrentWeapon], WeaponSpread[CurrentWeapon])), out RaycastHit hitInfo, 200f, hittable))
+            Vector3 vSpread = new Vector3(UnityEngine.Random.Range(-weapons[CurrentWeapon].Spread, weapons[CurrentWeapon].Spread), UnityEngine.Random.Range(-weapons[CurrentWeapon].Spread, weapons[CurrentWeapon].Spread), UnityEngine.Random.Range(-weapons[CurrentWeapon].Spread, weapons[CurrentWeapon].Spread));
+            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward + vSpread, out RaycastHit hitInfo, 200f, hittable))
             {
-                BulletRenderer.DrawBullet(___guntip.position, hitInfo.point, selfBulletColor);
-                ClientSend.Shoot(gunTip, hitInfo.point);
+                var hitPoint = hitInfo.point;
+                BulletRenderer.DrawBullet(___guntip.position, hitPoint, selfBulletColor);
+                ClientSend.Shoot(gunTip, hitPoint);
                 if (hitInfo.transform.gameObject.GetComponent<GameObjectToPlayerId>() != null)
                 {
                     float distance = hitInfo.distance;
-                    if (DamageDropoff[CurrentWeapon] == 0 || distance <= DamageDropoff[CurrentWeapon])
+                    if (weapons[CurrentWeapon].DamageDropoff == 0 || distance <= weapons[CurrentWeapon].DamageDropoff)
                     {
                         // calculate damage
-                        damage = MaxDamage[CurrentWeapon] - DamageScaleByDist[CurrentWeapon] * distance;
+                        damage = weapons[CurrentWeapon].MaxDamage - weapons[CurrentWeapon].DamageScaleByDist * distance;
                         if (damage < 0) damage = 0f; // dropoff not acounted by weapon specs
                         victim = hitInfo.transform.gameObject.GetComponent<GameObjectToPlayerId>().id;
                     }
                 }
+            }
+            else
+            {
+                // fake bullet ray
+                Vector3 hitPoint = Camera.main.transform.position + (Camera.main.transform.forward + vSpread) * 200f;
+                BulletRenderer.DrawBullet(___guntip.position, hitPoint, selfBulletColor);
+                ClientSend.Shoot(gunTip, hitPoint);
             }
             PlayerMovement.Instance.gameObject.layer = 8;
             return (victim, damage);
@@ -127,73 +162,129 @@ namespace KarlsonMP
 
         public static void Init()
         {
-            WeaponMag = new int[] { MaxWeaponMag[0], MaxWeaponMag[1], MaxWeaponMag[2] };
-            ReloadTime = new float[] { 0f, 0f, 0f };
-            CurrentWeapon = 0;
-            WeaponObjects = new GameObject[3];
-            WeaponObjects[0] = WeaponLib.MakeGun(ak47.GetComponent<MeshFilter>().mesh, ak47.GetComponent<MeshRenderer>().materials, new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), 0.2f, 0.15f);
-            WeaponObjects[1] = WeaponLib.MakeGun(deagle.GetComponent<MeshFilter>().mesh, deagle.GetComponent<MeshRenderer>().materials, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), 0.3f, 0.4f);
-            WeaponObjects[1].SetActive(false);
-            WeaponObjects[2] = WeaponLib.MakeGun(shotgun.GetComponent<MeshFilter>().mesh, shotgun.GetComponent<MeshRenderer>().materials, new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, 0.5f, 1f);
-            WeaponObjects[2].SetActive(false);
-            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(WeaponObjects[0]);
+            weapons = new List<Weapon>();
+            /*CurrentWeapon = 0;
+            weapons.Add(new Weapon(ak47, new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), Vector3.zero, "smg", 0.2f, 0.15f, 20, 1, 0.01f, 0.2f, 0, 40f, 0, 0.1f));
+            weapons.Add(new Weapon(deagle, new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), new Vector3(0f, 0.2f, 0.2f), "pistol", 0.3f, 0.4f, 1, 1, 0, 0.7f, 0, 100f, 0, 0));
+            weapons.Add(new Weapon(shotgun, new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, new Vector3(0f, 0.2f, 0.2f), "shotgun", 0.5f, 1, 8, 6, 0.075f, 0.5f, 7f, 40f, 50f, 1f));
+
+            weapons[0].WeaponObject.SetActive(true);
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(weapons[0].WeaponObject);*/
+        }
+
+        public static void GiveWeapon(string model, Vector3 localScale, Vector3 meshRotation, Vector3 gunTip, Vector3 viewOffset, string soundName, float recoil, float attackSpeed, int magazine, int bulletCount, float spread, float cooldown, float boostRecoil, float maxDamage, float damageDropoff, float damageScaleByDist)
+        {
+            GameObject importObj = null;
+            if (model == "ak47")
+                importObj = ak47;
+            else if (model == "deagle")
+                importObj = deagle;
+            else if (model == "shotty")
+                importObj = shotgun;
+            // default game assets
+            else if (model == "pistol")
+                importObj = KMP_PrefabManager.pistol;
+            else if (model == "uzi")
+                importObj = KMP_PrefabManager.ak47;
+            else if (model == "shotgun")
+                importObj = KMP_PrefabManager.shotgun;
+            else if (model == "grappler")
+                importObj = KMP_PrefabManager.grappler;
+            else if (model == "boomer")
+                importObj = KMP_PrefabManager.boomer;
+
+            // TODO: custom server assets
+            if (importObj == null) return;
+
+            weapons.Add(new Weapon(importObj, localScale, meshRotation, gunTip, viewOffset, soundName, recoil, attackSpeed, magazine, bulletCount, spread, cooldown, boostRecoil, maxDamage, damageDropoff, damageScaleByDist));
+            if(weapons.Count == 1)
+            {
+                // init weapons
+                weapons[0].WeaponObject.SetActive(true);
+                PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(weapons[0].WeaponObject);
+                SwitchWeapon(0);
+            }
+        }
+
+        public static void RemoveWeapon(int idx)
+        {
+            UnityEngine.Object.Destroy(weapons[idx].WeaponObject);
+            weapons.RemoveAt(idx);
+            if (weapons.Count > 0)
+                SwitchWeapon(0);
+            else
+            {
+                // de-init weapons
+                PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("hasGun", false);
+                PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet<GameObject>("gun", null);
+                PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet<Pickup>("gunScript", null);
+            }
         }
 
         public static void SwitchWeapon(int idx)
         {
             KMP_AudioManager.PlaySound("reload", 0.08f);
-            Pickup pk = WeaponObjects[CurrentWeapon].GetComponent<Pickup>();
+            Pickup pk = weapons[CurrentWeapon].WeaponObject.GetComponent<Pickup>();
             pk.StopUse();
-            WeaponObjects[CurrentWeapon].transform.parent = null;
-            WeaponObjects[CurrentWeapon].layer = LayerMask.NameToLayer("Gun");
+            weapons[CurrentWeapon].WeaponObject.transform.parent = null;
+            weapons[CurrentWeapon].WeaponObject.layer = LayerMask.NameToLayer("Gun");
             pk.readyToUse = true;
             pk.pickedUp = false;
-            RangedWeapon rw = WeaponObjects[CurrentWeapon].GetComponent<RangedWeapon>();
+            RangedWeapon rw = weapons[CurrentWeapon].WeaponObject.GetComponent<RangedWeapon>();
             rw.CancelInvoke(); // cancel all active invokes, there is a bug here, produced by our system
-            WeaponObjects[CurrentWeapon].SetActive(false);
+            weapons[CurrentWeapon].WeaponObject.SetActive(false);
 
-            if (ReloadTime[CurrentWeapon] > 0)
-                ReloadTime[CurrentWeapon] = 0; // we were reloading, so cancel
+            if (weapons[CurrentWeapon].ReloadTime > 0)
+                weapons[CurrentWeapon].ReloadTime = 0; // we were reloading, so cancel
 
             CurrentWeapon = idx;
-            WeaponObjects[idx].SetActive(true);
-            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(WeaponObjects[idx]);
+            weapons[idx].WeaponObject.SetActive(true);
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ForcePickup(weapons[idx].WeaponObject);
             // somewhat nice animation
-            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("desiredPos", DesiredPos[idx]);
-            WeaponObjects[idx].transform.localPosition = DesiredPos[idx];
-            WeaponObjects[idx].transform.localRotation = Quaternion.Euler(0f, 90f, 179f);
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("desiredPos", weapons[idx].DesiredPos);
+            weapons[idx].WeaponObject.transform.localPosition = weapons[idx].DesiredPos;
+            weapons[idx].WeaponObject.transform.localRotation = Quaternion.Euler(0f, 90f, 179f);
             // switch cooldown
-            CurrentWeaponCooldown = MaxCooldownTime[idx];
-            WeaponObjects[idx].GetComponent<Pickup>().StopUse();
+            CurrentWeaponCooldown = weapons[idx].Cooldown;
+            weapons[idx].WeaponObject.GetComponent<Pickup>().StopUse();
         }
         public static void NextWeapon()
         {
+            if(weapons.Count == 0) return;
             int idx = CurrentWeapon + 1;
-            if (idx > 2) idx = 0;
+            if (idx >= weapons.Count) idx = 0;
             SwitchWeapon(idx);
         }
         public static void PrevWeapon()
         {
+            if (weapons.Count == 0) return;
             int idx = CurrentWeapon - 1;
-            if (idx < 0) idx = 2;
+            if (idx < 0) idx = weapons.Count - 1;
             SwitchWeapon(idx);
         }
 
         public static void ReloadAll()
         {
-            WeaponMag = new int[] { MaxWeaponMag[0], MaxWeaponMag[1], MaxWeaponMag[2] };
-            ReloadTime = new float[] { 0f, 0f, 0f };
+            if (weapons == null) return;
+            // remove old weapons
+            foreach (var x in weapons)
+                UnityEngine.Object.Destroy(x.WeaponObject);
+            weapons.Clear();
+            CurrentWeapon = 0;
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet("hasGun", false);
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet<GameObject>("gun", null);
+            PlayerMovement.Instance.ReflectionGet<DetectWeapons>("detectWeapons").ReflectionSet<Pickup>("gunScript", null);
         }
 
         // 0 - ak47, 1 - deagle, 2 - shotgun
         private static int CurrentWeapon = 0;
-        private static int[] WeaponMag = new int[] { 20, 1, 8 };
-        private static float[] ReloadTime = new float[] { 0f, 0f, 0f };
         private static float CurrentWeaponCooldown = 0f;
 
-        public static bool CanShoot => CurrentWeaponCooldown == 0f && ReloadTime[CurrentWeapon] == 0f;
+        public static bool CanShoot => CurrentWeaponCooldown == 0f && weapons[CurrentWeapon].ReloadTime == 0f;
 
-        // weapon stats
+        /*// weapon stats
+        private static int[] WeaponMag = new int[] { 20, 1, 8 };
+        private static float[] ReloadTime = new float[] { 0f, 0f, 0f };
         private static readonly int[]
             MaxWeaponMag = new int[] { 20, 1, 8 }, // max bullets in magazine
             BulletCount = new int[] { 1, 1, 6 }; // bullets in a shot
@@ -207,17 +298,20 @@ namespace KarlsonMP
                                                                 // if dist < damagedropoff : damage = MaxDamage - DamageScaleByDist * distance
                                                                 // idealy DamageDropoff should be MaxDamage / DamageScaleByDist
                                                                 // but it doesn't have to be
-        private static readonly float MaxReloadTime = 0.5f;
+        
         private static readonly Vector3[] DesiredPos = new Vector3[] { Vector3.zero, new Vector3(0f, 0.2f, 0.2f), new Vector3(0f, 0.2f, 0.2f) };
 
         private static GameObject[] WeaponObjects;
+        */
+        private static readonly float MaxReloadTime = 0.5f;
 
         public static void Update()
         {
+            if (weapons == null || weapons.Count == 0) return;
             if(Input.GetKeyDown(KeyCode.R))
-                if(ReloadTime[CurrentWeapon] == 0 && WeaponMag[CurrentWeapon] < MaxWeaponMag[CurrentWeapon]) // manual reload
+                if(weapons[CurrentWeapon].ReloadTime == 0 && weapons[CurrentWeapon].Magazine < weapons[CurrentWeapon].MaxMagazine) // manual reload
                 {
-                    ReloadTime[CurrentWeapon] = MaxReloadTime;
+                    weapons[CurrentWeapon].ReloadTime = MaxReloadTime;
                     KMP_AudioManager.PlaySound("reload", 0.08f);
                 }
 
@@ -229,22 +323,22 @@ namespace KarlsonMP
             }
             else
             {
-                if (ReloadTime[CurrentWeapon] != 0)
+                if (weapons[CurrentWeapon].ReloadTime != 0)
                 {
-                    ReloadTime[CurrentWeapon] -= Time.deltaTime;
-                    if (ReloadTime[CurrentWeapon] <= 0f)
+                    weapons[CurrentWeapon].ReloadTime -= Time.deltaTime;
+                    if (weapons[CurrentWeapon].ReloadTime <= 0f)
                     {
                         // finished reloading
-                        ReloadTime[CurrentWeapon] = 0f;
-                        WeaponMag[CurrentWeapon] = MaxWeaponMag[CurrentWeapon];
-                        CurrentWeaponCooldown = MaxCooldownTime[CurrentWeapon];
+                        weapons[CurrentWeapon].ReloadTime = 0f;
+                        weapons[CurrentWeapon].Magazine = weapons[CurrentWeapon].MaxMagazine;
+                        CurrentWeaponCooldown = weapons[CurrentWeapon].Cooldown;
                     }
                     else
                     {
                         // animation for reloading
                         // cubic ease-out
-                        float zAngle = 360f * Mathf.Pow(ReloadTime[CurrentWeapon] / MaxReloadTime, 3);
-                        WeaponObjects[CurrentWeapon].transform.localRotation = Quaternion.Euler(0f, 90f, zAngle);
+                        float zAngle = 360f * Mathf.Pow(weapons[CurrentWeapon].ReloadTime / MaxReloadTime, 3);
+                        weapons[CurrentWeapon].WeaponObject.transform.localRotation = Quaternion.Euler(0f, 90f, zAngle);
                     }
                 }
             }
@@ -260,8 +354,10 @@ namespace KarlsonMP
         public static void OnGUI()
         {
             if (!ClientHandle.PlayerList) return;
+            if (weapons.Count == 0) return;
+            if (PlaytimeLogic.spectatingId != 0) return;
             GUI.DrawTexture(new Rect(Screen.width - 100f, Screen.height - 100f, 50f, 50f), ammoIcon);
-            GUI.Label(new Rect(Screen.width - 240f, Screen.height - 100f, 140f, 70f), $"<b><size=50><color=white>{WeaponMag[CurrentWeapon]} </color></size><size=25><color=silver>/{MaxWeaponMag[CurrentWeapon]}</color></size></b>", MonoHooks.defaultLabel);
+            GUI.Label(new Rect(Screen.width - 240f, Screen.height - 100f, 140f, 70f), $"<b><size=50><color=white>{weapons[CurrentWeapon].Magazine} </color></size><size=25><color=silver>/{weapons[CurrentWeapon].MaxMagazine}</color></size></b>");
         }
     }
 

@@ -17,12 +17,14 @@ namespace KarlsonMP
     {
         public static MonoHooks monoHooks;
         public static Harmony harmony;
+        public static string KMP_ROOT;
 
         public static void Start()
         {
+            KMP_ROOT = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Loadson", "KarlsonMP");
             // here we are in Managers.Start already
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP.log")))
-                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"KarlsonMP.log"));
+            if (File.Exists(Path.Combine(KMP_ROOT, $"KarlsonMP.log")))
+                File.Delete(Path.Combine(KMP_ROOT, $"KarlsonMP.log"));
 
             Application.logMessageReceived += (a, b, c) =>
             {

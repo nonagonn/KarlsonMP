@@ -6,17 +6,14 @@ using System.Threading.Tasks;
 using ServerKMP.GamemodeApi;
 using ServerKMP;
 using System.IO.Ports;
+using System.Drawing;
 
-namespace Default
+namespace FFA
 {
     public class GamemodeEntry : Gamemode
     {
-        private static Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>> messageHandlers;
-        public static Dictionary<ushort, Player> players;
-
-        public override void OnStart()
-        {
-            messageHandlers = new Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>>
+        public static Random rnd = new Random();
+        private static Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>> messageHandlers = new Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>>
             {
                 { Packet_C2S.handshake, MessageHandlers.Handshake },
                 { Packet_C2S.position, MessageHandlers.PositionData },
@@ -24,8 +21,18 @@ namespace Default
                 { Packet_C2S.shoot, MessageHandlers.Shoot },
                 { Packet_C2S.damage, MessageHandlers.Damage },
                 { Packet_C2S.chat, MessageHandlers.Chat },
+                { Packet_C2S.pickup, MessageHandlers.Pickup },
+                { Packet_C2S.password, MessageHandlers.Password },
             };
-            players = new Dictionary<ushort, Player>();
+        public static Dictionary<ushort, Player> players = new Dictionary<ushort, Player>();
+
+        public override void OnStart()
+        {
+            KMP_TaskScheduler.scheduledTasks.Clear();
+        }
+        public override void OnStop()
+        {
+            players.Clear();
         }
 
         public override void ProcessMessage(MessageClientToServer.MessageBase_C2S message)
@@ -43,6 +50,7 @@ namespace Default
 
         public override void OnPlayerDisconnect(ushort id)
         {
+            new MessageServerToClient.MessageKillFeed($"<color=red>({id}) {players[id].username} disconnected</color>").SendToAll();
             players[id].Destroy();
             players.Remove(id);
             // send player leave message
@@ -54,7 +62,7 @@ namespace Default
 
         public override void OnMapChange()
         {
-            if (MapManager.currentMap.isDefault) // default map, just send scene name
+            if (MapManager.currentMap!.isDefault) // default map, just send scene name
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).SendToAll();
             else // here we need to use the pre-implemented http server
                 new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).SendToAll();
@@ -62,7 +70,7 @@ namespace Default
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(GamemodeEntry.players.Select(x => (x.Key, x.Value.username, x.Value.kills, x.Value.deaths, x.Value.score)).ToList()).SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(GamemodeEntry.players.Select(x => (x.Key, x.Value.username, x.Value.kills, x.Value.deaths, x.Value.score)).ToList()).Compile().SendToAll();
         }
     }
 }

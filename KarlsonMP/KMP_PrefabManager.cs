@@ -13,7 +13,7 @@ namespace KarlsonMP
     {
         /* Weapons */
 
-        private static GameObject pistol;
+        public static GameObject pistol;
         public static GameObject NewPistol()
         {
             GameObject _pistol = UnityEngine.Object.Instantiate(pistol);
@@ -22,7 +22,7 @@ namespace KarlsonMP
             return _pistol;
         }
 
-        private static GameObject ak47;
+        public static GameObject ak47;
         public static GameObject NewAk47()
         {
             GameObject _ak47 = UnityEngine.Object.Instantiate(ak47);
@@ -31,7 +31,7 @@ namespace KarlsonMP
             return _ak47;
         }
 
-        private static GameObject shotgun;
+        public static GameObject shotgun;
         public static GameObject NewShotgun()
         {
             GameObject _shotgun = UnityEngine.Object.Instantiate(shotgun);
@@ -40,7 +40,7 @@ namespace KarlsonMP
             return _shotgun;
         }
 
-        private static GameObject boomer;
+        public static GameObject boomer;
         public static GameObject NewBoomer()
         {
             GameObject _boomer = UnityEngine.Object.Instantiate(boomer);
@@ -49,8 +49,8 @@ namespace KarlsonMP
             return _boomer;
         }
 
-        private static GameObject grappler;
-        private static GameObject grappler_aim;
+        public static GameObject grappler;
+        public static GameObject grappler_aim;
         public static GameObject NewGrappler()
         {
             GameObject _grappler = UnityEngine.Object.Instantiate(grappler);

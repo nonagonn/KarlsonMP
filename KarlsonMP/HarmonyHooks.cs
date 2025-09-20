@@ -1,14 +1,15 @@
-﻿using HarmonyLib;
-using System.Collections;
-using UnityEngine.SceneManagement;
-using UnityEngine;
-using System.Linq;
-using Audio;
-using System;
-using TMPro;
+﻿using Audio;
+using HarmonyLib;
 using Riptide;
-using System.Reflection;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using static KarlsonMP.PropManager;
 
 namespace KarlsonMP
 {
@@ -80,6 +81,7 @@ namespace KarlsonMP
                         go.GetComponent<UnityEngine.UI.Button>().interactable = false;
                     }
                 }
+                ServerBrowser.Start();
 
                 if (!done)
                 {
@@ -127,7 +129,6 @@ namespace KarlsonMP
 
         private static void PostLoad()
         {
-            ServerBrowser.Start();
         }
     }
 
@@ -230,6 +231,21 @@ namespace KarlsonMP
             KMP_Console.Log("Riptide MessageHandlers fix:");
             __result = Assembly.GetExecutingAssembly().GetTypes().SelectMany(x => x.GetMethods()).Where(m => m.GetCustomAttributes(typeof(MessageHandlerAttribute), false).Length > 0).ToArray();
             foreach (var x in __result) KMP_Console.Log(x.Name + " @ " + x.DeclaringType.FullName);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Milk), "OnTriggerEnter")]
+    public class Hook_Milk_OnTriggerEnter
+    {
+        public static bool Prefix(Collider other, Milk __instance)
+        {
+            if(other.gameObject.layer == LayerMask.NameToLayer("Player"))
+            {
+                var data = __instance.GetComponent<KMP_PropData>();
+                if (!data || !data.annouce) return false;
+                ClientSend.Pickup(data.id);
+            }
             return false;
         }
     }

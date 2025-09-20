@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace KarlsonMP
 {
@@ -15,6 +17,7 @@ namespace KarlsonMP
         public static int spectatingId { get; private set; } = 0;
         public static bool showNametags = true;
         public static bool suicided = false;
+        public static bool enableCollisions = true;
         public static void StartSpectate(int targetId)
         {
             spectatingId = targetId;
@@ -69,8 +72,14 @@ namespace KarlsonMP
                     ForcePause(!paused);
             }
             if(!paused)
+            {
                 if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.Return))
                     chatOpened = true;
+                if(Input.GetKeyDown(KeyCode.P))
+                {
+                    PasswordDialog.Prompt("", Array.Empty<byte>());
+                }
+            }
 
             if (paused)
             {
@@ -107,6 +116,41 @@ namespace KarlsonMP
             ClientSend.PositionData();
         }
 
+        public static class PasswordDialog
+        {
+            public static bool Opened = false;
+            public static string Caption;
+            public static byte[] CspBlob;
+            public static string Input;
+            public static void Prompt(string prompt, byte[] cspBlob)
+            {
+                if (prompt == "")
+                    prompt = "Server prompted you for a password.";
+                Caption = prompt;
+                CspBlob = cspBlob;
+                Opened = true;
+                Input = "";
+                ForcePause(true);
+            }
+            public static void SendPassword()
+            {
+                Opened = false;
+                if (Input.Length == 0)
+                {
+                    ClientSend.Password(Array.Empty<byte>());
+                    return;
+                }
+                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+                {
+                    rsa.PersistKeyInCsp = false;
+                    rsa.ImportCspBlob(CspBlob);
+                    byte[] pwEnc = rsa.Encrypt(Encoding.UTF8.GetBytes(Input), false);
+                    ClientSend.Password(pwEnc);
+                    ForcePause(false);
+                }
+            }
+        }
+
         private static int pauseState = 0, pauseTick = 0;
         private const string watermark = "made by devilexe.\nmodels by nonagon.";
         public static bool showDebug = true;
@@ -133,18 +177,17 @@ namespace KarlsonMP
             hpBar_green.SetPixel(0, 0, new Color(0f, 0.5f, 0f));
             hpBar_green.Apply();
             nameStyle = new GUIStyle();
-            nameStyle.font = MonoHooks.arialFont;
             nameStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f, 0.7f);
 
             console = new GuiWindow("console", 50, 50, 800, 500, () =>
             {
-                if (GUI.Button(new Rect(750, 0, 50, 20), "Close", MonoHooks.defaultButton)) console.show = false;
-                Vector2 size = MonoHooks.defaultLabel.CalcSize(new GUIContent(KMP_Console.Content));
+                if (GUI.Button(new Rect(750, 0, 50, 20), "Close")) console.show = false;
+                Vector2 size = GUI.skin.label.CalcSize(new GUIContent(KMP_Console.Content));
                 console.storage = GUI.BeginScrollView(new Rect(5, 20, 785, 460), (Vector2)console.storage, new Rect(0, 0, size.x, size.y));
-                GUI.Label(new Rect(0, 0, size.x, size.y), KMP_Console.Content, MonoHooks.defaultLabel);
+                GUI.Label(new Rect(0, 0, size.x, size.y), KMP_Console.Content);
                 GUI.EndScrollView();
                 GUI.SetNextControlName("ConsoleInput");
-                ConsoleInput = GUI.TextArea(new Rect(0, 480, 800, 20), ConsoleInput, MonoHooks.defaultTextArea);
+                ConsoleInput = GUI.TextArea(new Rect(0, 480, 800, 20), ConsoleInput);
                 GUI.FocusControl("ConsoleInput");
                 if(ConsoleInput.Contains("\n"))
                 {
@@ -178,38 +221,48 @@ namespace KarlsonMP
                 if (!(bool)settings.storage)
                     return;
 
-                if (GUI.Button(new Rect(390, 0, 50, 20), "Close", MonoHooks.defaultButton)) settings.show = false;
-                GUI.Label(new Rect(5f, 25f, 100f, 20f), "<b>Graphics</b>", MonoHooks.defaultLabel);
+                if (GUI.Button(new Rect(390, 0, 50, 20), "Close")) settings.show = false;
+                GUI.Label(new Rect(5f, 25f, 100f, 20f), "<b>Graphics</b>");
                 settings_graphics.draw();
 
-                GUI.Label(new Rect(5f, 70f, 100f, 20f), "<b>Motion Blur</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(5f, 70f, 100f, 20f), "<b>Motion Blur</b>");
                 settings_motion_blur.draw();
 
-                GUI.Label(new Rect(5f, 115f, 100f, 20f), "<b>Cam Shake</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(5f, 115f, 100f, 20f), "<b>Cam Shake</b>");
                 settings_cam_shake.draw();
 
-                GUI.Label(new Rect(5f, 160f, 100f, 20f), "<b>Slow-mo</b>", MonoHooks.defaultLabel);
-                GUI.Label(new Rect(5f, 180f, 100f, 20f), "Off by KMP", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(5f, 160f, 100f, 20f), "<b>Slow-mo</b>");
+                GUI.Label(new Rect(5f, 180f, 100f, 20f), "Off by KMP");
 
-                GUI.Label(new Rect(120f, 25f, 150f, 20f), "<b>Sensitivity</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(120f, 25f, 150f, 20f), "<b>Sensitivity</b>");
                 settings_sensitivity.draw();
 
-                GUI.Label(new Rect(120f, 70f, 150f, 20f), "<b>Volume</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(120f, 70f, 150f, 20f), "<b>Volume</b>");
                 settings_volume.draw();
 
-                GUI.Label(new Rect(120f, 115f, 150f, 20f), "<b>Music</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(120f, 115f, 150f, 20f), "<b>Music</b>");
                 settings_music.draw();
 
-                GUI.Label(new Rect(120f, 160f, 150f, 20f), "<b>FOV</b>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(120f, 160f, 150f, 20f), "<b>FOV</b>");
                 settings_fov.draw();
 
                 settings_fps_on.draw();
                 settings_speed_on.draw();
-                showDebug = GUI.Toggle(new Rect(285f, 65f, 130f, 20f), showDebug, "Show RTT (ping)", MonoHooks.defaultToggle);
+                showDebug = GUI.Toggle(new Rect(285f, 65f, 130f, 20f), showDebug, "Show RTT (ping)");
             }, false);
+
+            password = new GuiWindow("Enter Password (E2E encrypted)", Screen.width / 2 - 150, Screen.height / 2 - 75, 300, 150, () =>
+            {
+                GUI.Label(new Rect(5f, 25f, 300, 60), PasswordDialog.Caption);
+                GUI.SetNextControlName("passfield");
+                PasswordDialog.Input = GUI.PasswordField(new Rect(10f, 120f, 280f, 20f), PasswordDialog.Input, '●');
+                GUI.FocusControl("passfield");
+                if (Event.current.type == EventType.KeyDown && Event.current.character == '\n')
+                    PasswordDialog.SendPassword();
+            }, null, _show: true);
         }
 
-        static GuiWindow settings, console;
+        static GuiWindow settings, console, password;
         static GuiSwitch settings_graphics, settings_motion_blur, settings_cam_shake;
         static GuiSliderAndTextbox settings_sensitivity, settings_volume, settings_music, settings_fov;
         static GuiReflectionCheckbox settings_fps_on, settings_speed_on;
@@ -218,9 +271,12 @@ namespace KarlsonMP
         {
             if (!ClientHandle.PlayerList) return;
             // hp
-            GUI.Label(new Rect(50f, Screen.height - 110f, 150f, 70f), $"<size=50><color=green><b>+</b></color> {hp}</size>", MonoHooks.defaultLabel);
-            GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f, 20f), hpBar_black);
-            GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f * hp / 100f, 20f), hpBar_green);
+            if(spectatingId == 0)
+            {
+                GUI.Label(new Rect(50f, Screen.height - 110f, 150f, 70f), $"<size=50><color=green><b>+</b></color> {hp}</size>");
+                GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f, 20f), hpBar_black);
+                GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f * hp / 100f, 20f), hpBar_green);
+            }
 
             // draw names
             foreach (Player p in players)
@@ -228,8 +284,9 @@ namespace KarlsonMP
                 if (!p.nametagShown) continue;
                 string text = "(" + p.id + ") " + p.username;
 
-                Vector3 pos = Camera.main.WorldToScreenPoint(p.player.transform.position + new Vector3(0f, 2f, 0f));
-                if (Vector3.Distance(p.player.transform.position, PlayerMovement.Instance.transform.position) >= 150f)
+                var dist = Vector3.Distance(p.player.transform.position, PlayerMovement.Instance.transform.position);
+                Vector3 pos = Camera.main.WorldToScreenPoint(p.player.transform.position + new Vector3(0f, 0.5f + dist * 0.01f, 0f));
+                if (dist >= 50f)
                     continue; // player is too far
                 if (pos.z < 0)
                     continue; // point is behind our camera
@@ -239,14 +296,14 @@ namespace KarlsonMP
             }
             
             if (showDebug)
-                GUI.Label(new Rect(Screen.width - 121f, Screen.height - 35f, 100f, 20f), $"<color=white>RTT: {NetworkManager.client.SmoothRTT}</color>", MonoHooks.defaultLabel);
+                GUI.Label(new Rect(Screen.width - 78f, Screen.height - 35f, 100f, 20f), $"<color=white>RTT: {NetworkManager.client.SmoothRTT}</color>");
 
             // chat
-            GUI.Label(new Rect(0f, 20f, 500f, 250f), chat, MonoHooks.defaultLabel);
+            GUI.Label(new Rect(5f, 20f, 500f, 250f), chat);
             if(chatOpened)
             {
                 GUI.SetNextControlName("chatcontrol");
-                chatContent = GUI.TextArea(new Rect(0f, 260f, 500f, 20f), chatContent, MonoHooks.defaultTextArea);
+                chatContent = GUI.TextArea(new Rect(0f, 260f, 500f, 20f), chatContent);
                 GUI.FocusControl("chatcontrol");
                 if(chatContent.Contains('\n'))
                 {
@@ -263,76 +320,40 @@ namespace KarlsonMP
                 }
             }
 
+            if (PasswordDialog.Opened)
+                password.draw();
+
             // pause screen
             if (!paused)
                 return;
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), MonoHooks._grayTx);
-            if (pauseState > 0) if (GUI.Button(new Rect(50, Screen.height - 70, 120, 20), "Exit Game", MonoHooks.defaultButton)) Application.Quit();
-            if (pauseState > 1) if (GUI.Button(new Rect(50, Screen.height - 90, 120, 20), "Return to game", MonoHooks.defaultButton)) paused = false;
-            if (pauseState > 2) if (GUI.Button(new Rect(50, Screen.height - 110, 120, 20), "Settings", MonoHooks.defaultButton)) settings.show = !settings.show;
-            if (pauseState > 3) GUI.Button(new Rect(50, Screen.height - 130, 120, 20), "Player List", MonoHooks.defaultButton);
-            if (pauseState > 4) if (GUI.Button(new Rect(50, Screen.height - 150, 120, 20), "Console", MonoHooks.defaultButton)) console.show = !console.show;
-            if (pauseState > 5) GUI.Label(new Rect(50, Screen.height - 185, 120, 40), watermark.Substring(0, pauseState - 5), MonoHooks.defaultLabel);
+            if (pauseState > 0) if (GUI.Button(new Rect(50, Screen.height - 70, 120, 20), "Exit Game")) Application.Quit();
+            if (pauseState > 1) if (GUI.Button(new Rect(50, Screen.height - 90, 120, 20), "Return to game")) paused = false;
+            if (pauseState > 2) if (GUI.Button(new Rect(50, Screen.height - 110, 120, 20), "Disconnect")) DisconnectToBrowser();
+            if (pauseState > 3) if (GUI.Button(new Rect(50, Screen.height - 130, 120, 20), "Settings")) settings.show = !settings.show;
+            if (pauseState > 4) if (GUI.Button(new Rect(50, Screen.height - 150, 120, 20), "Console")) console.show = !console.show;
+            if (pauseState > 5) GUI.Label(new Rect(50, Screen.height - 185, 120, 40), watermark.Substring(0, pauseState - 5));
 
             console.draw();
             settings.draw();
         }
         public static List<Player> players = new List<Player>();
-    }
 
-    public class KeyboardState
-    {
-        public float Horizontal;
-        public float Vertical;
-        public bool Jump;
-        public bool Crouch;
-        public bool Pickup;
-        public bool Drop;
-        public bool Fire1;
-        public float rotX;
-        public float rotY;
-        public void Reset()
+        public static void DisconnectToBrowser()
         {
-            Horizontal = 0;
-            Vertical = 0;
-            Jump = false;
-            Crouch = false;
-            Pickup = false;
-            Drop = false;
-            Fire1 = false;
-        }
-        public void SyncWith(KeyboardState other)
-        {
-            Horizontal = other.Horizontal;
-            Vertical = other.Vertical;
-            Jump = other.Jump;
-            Crouch = other.Crouch;
-            Pickup = other.Pickup;
-            Drop = other.Drop;
-            Fire1 = other.Fire1;
-            rotX = other.rotX;
-            rotY = other.rotY;
-        }
-        public KeyboardState Clone()
-        {
-            KeyboardState ks = new KeyboardState();
-            ks.SyncWith(this);
-            return ks;
-        }
-
-        // KMP Server-side code, for client-side prediction
-        public bool oldCrouch = false;
-        public bool StartCrouch()
-        {
-            return !oldCrouch && Crouch;
-        }
-        public bool StopCrouch()
-        {
-            return oldCrouch && !Crouch;
-        }
-        public void SyncCrouch()
-        {
-            oldCrouch = Crouch;
+            NetworkManager.Quit();
+            paused = false;
+            NetworkManager.client = null;
+            ClientHandle.ResetPlayerList();
+            players.Clear();
+            PropManager.ClearProps();
+            Inventory.ReloadAll();
+            chat = "Press <b>Y</b> or <b>Enter</b> to chat.";
+            HUDMessages.ClearMessages();
+            Inventory.selfBulletColor = Color.blue;
+            Physics.IgnoreLayerCollision(8, 8, false);
+            Physics.IgnoreLayerCollision(8, 12, false);
+            Game.Instance.MainMenu();
         }
     }
 }

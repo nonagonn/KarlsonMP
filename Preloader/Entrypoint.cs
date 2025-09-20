@@ -3,8 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Security;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,11 +18,18 @@ namespace Preloader
 {
     public class Entrypoint
     {
+        public const string API_ENDPOINT = "https://raw.githubusercontent.com/karlsonmodding/KarlsonMP/refs/heads/deploy";
         public static Harmony harmony;
+        static string LOADSON_ROOT;
+
+        static bool checking = true;
+        static int filesDl = 0, filesToDl = 0;
+        static WebClient wc;
 
         // Preloader entrypoint
         public static void Start()
         {
+            LOADSON_ROOT = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Loadson");
             harmony = new Harmony("preloader");
             harmony.PatchAll();
         }
@@ -37,43 +47,72 @@ namespace Preloader
             go = new GameObject("Preloader");
             go.AddComponent<PreloaderBehaviour>();
 
-            // todo: check for updates
+            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(delegate { return true; });
+            wc = new WebClient();
+            new Thread(() =>
+            {
+                var hashmap_raw = wc.DownloadString(API_ENDPOINT + "/hashmap");
+                List<string> filesToUpdate = new List<string>();
+                foreach(var hashinfo in hashmap_raw.Split('\n'))
+                {
+                    if (hashinfo.Length == 0) continue;
+                    var file = hashinfo.Split(':')[0];
+                    var hash = hashinfo.Split(':')[1];
+                    if (!File.Exists(Path.Combine(LOADSON_ROOT, "KarlsonMP", file)) || CheckHash(Path.Combine(LOADSON_ROOT, "KarlsonMP", file)) != hash)
+                        filesToUpdate.Add(file);
+                }
+                filesToDl = filesToUpdate.Count;
+                checking = false;
+                foreach(var file in filesToUpdate)
+                {
+                    File.WriteAllBytes(Path.Combine(LOADSON_ROOT, "KarlsonMP", file), wc.DownloadData(API_ENDPOINT + "/files/" + file));
+                    ++filesDl;
+                }
+            }).Start();
+        }
 
-            //window = new Rect(Screen.width / 2 - 300, Screen.height / 2 - 200, 600, 400);
-            window = new Rect(50, 50, 600, 400);
+        static string CheckHash(string filename)
+        {
+            using (var md5 = MD5.Create())
+            {
+                using (var stream = File.OpenRead(filename))
+                {
+                    var hash = md5.ComputeHash(stream);
+                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
+            }
         }
 
         // After updater ran
+        static bool ran = false;
         public static void PostUpdate()
         {
+            if (ran) return;
+            ran = true;
+            wc.Dispose();
             UnityEngine.Object.Destroy(go); // destroy our monobehaviour
             // load kmp
-            var kmp = Assembly.LoadFrom(Path.Combine(Directory.GetCurrentDirectory(), "KMP", "KarlsonMP.dll"));
+            var kmp = Assembly.LoadFrom(Path.Combine(LOADSON_ROOT, "KarlsonMP", "KarlsonMP.dll"));
             kmp.GetType("KarlsonMP.Loader").GetMethod("Start").Invoke(null, Array.Empty<object>());
         }
 
-        static bool fontLoaded = false;
-
         // OnGUI, before our dll is loaded
-        static Rect window;
         public static void OnGUI()
         {
-            if(!fontLoaded)
-            {
-                AssetBundle bundle = AssetBundle.LoadFromStream(typeof(Entrypoint).Assembly.GetManifestResourceStream("Preloader.font"));
-                Font font = bundle.LoadAsset<Font>("arial");
-                GUI.skin.font = font;
-                bundle.Unload(false);
-                fontLoaded = true;
-            }
-            GUI.DrawTextureWithTexCoords(new Rect(0, 0, Screen.width, Screen.height), grayTx, new Rect(0, 0, 1, 1));
-            window = GUI.Window(1, window, (wid) =>
-            {
-                GUI.Label(new Rect(5, 20, 100, 20), "KarlsonMP preloader. nothing yet");
-                GUI.Label(new Rect(5, 40, 100, 20), "will check for updates here");
-                if (GUI.Button(new Rect(200, 350, 200, 30), "OK!")) PostUpdate();
-                GUI.DragWindow();
-            }, "KarlsonMP preloader");
+            if (checking)
+                GUI.Window(1, new Rect(Screen.width / 2 - 150, Screen.height / 2 - 30, 300, 65), (wid) =>
+                {
+                    GUI.Label(new Rect(5, 20, 300, 20), "Please wait..");
+                    GUI.Label(new Rect(5, 40, 300, 20), "Checking for updates");
+                }, "KarlsonMP Updater");
+            else if (filesDl == filesToDl)
+                PostUpdate();
+            else
+                GUI.Window(1, new Rect(Screen.width / 2 - 150, Screen.height / 2 - 30, 300, 65), (wid) =>
+                {
+                    GUI.Label(new Rect(5, 20, 300, 20), "Please wait, downloading files..");
+                    GUI.Label(new Rect(5, 40, 300, 20), $"Progress: {filesDl} / {filesToDl}");
+                }, "KarlsonMP Updater");
         }
     }
 
