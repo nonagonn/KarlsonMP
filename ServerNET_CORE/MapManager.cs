@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ServerNET_CORE;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -56,7 +57,7 @@ namespace ServerKMP
                     Map map = new Map(mapName, map_data, false);
                     currentMap = map;
                     Console.WriteLine("Switched map to custom map " + mapName);
-                    MapDownloader.mapData = File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Maps", mapName + ".kme_raw"));
+                    FileUploader.mapData = File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Maps", mapName + ".kme_raw"));
                 }
             }
             GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnMapChange);

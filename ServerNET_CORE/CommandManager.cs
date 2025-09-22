@@ -18,7 +18,6 @@ namespace ServerKMP
             {
                 Console.WriteLine("Quitting server..");
                 Program.ExitServer();
-                MapDownloader.Exit();
             });
             commands.Add("map", (args) =>
             {

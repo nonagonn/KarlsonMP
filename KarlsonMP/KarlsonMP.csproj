@@ -238,6 +238,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BulletRenderer.cs" />
+    <Compile Include="FileHandler.cs" />
     <Compile Include="ForcedCultureInfo.cs" />
     <Compile Include="GuiExtensions.cs" />
     <Compile Include="HarmonyHooks.cs" />

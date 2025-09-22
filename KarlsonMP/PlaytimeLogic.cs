@@ -100,6 +100,9 @@ namespace KarlsonMP
             if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
                 return;
 
+            // process download queue
+            FileHandler.ProcessDownloadQueue();
+
             if (paused)
             {
                 if (pauseState < watermark.Length + 5)
@@ -114,6 +117,16 @@ namespace KarlsonMP
             }
 
             ClientSend.PositionData();
+        }
+
+        public static void PrepareMapChange()
+        {
+            // clear old player list
+            players.Clear();
+            ClientHandle.ResetPlayerList();
+            // delete old props
+            PropManager.ClearProps();
+            BulletRenderer.DeleteBullets();
         }
 
         public static class PasswordDialog
@@ -283,6 +296,8 @@ namespace KarlsonMP
 
         public static void OnGUI()
         {
+            if (PasswordDialog.Opened)
+                password.draw();
             if (!ClientHandle.PlayerList) return;
             // hp
             if(spectatingId == 0)
@@ -340,9 +355,6 @@ namespace KarlsonMP
                     chatOpened = false;
                 }
             }
-
-            if (PasswordDialog.Opened)
-                password.draw();
 
             // pause screen
             if (!paused)

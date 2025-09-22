@@ -79,6 +79,8 @@ namespace KarlsonMP
         public const ushort levelprop = 22; // create/destroy prop
         public const ushort linkprop = 23; // link prop to player
         public const ushort password = 24; // for requesting a password from player
+        public const ushort file_dl = 25; // send file for download to the client (includes length and checksum)
+        public const ushort file_data = 26; // sending file part in response to client request
     }
     public static class Packet_C2S
     {
@@ -90,6 +92,7 @@ namespace KarlsonMP
         public const ushort chat = 6;
         public const ushort pickup = 7; // announce prop pickup
         public const ushort password = 8; // for sending a password to the server
+        public const ushort file_data = 9; // request file part for download
     }
 
     public class ClientSend
@@ -157,6 +160,13 @@ namespace KarlsonMP
             message.Add(pw);
             NetworkManager.client.Send(message);
         }
+
+        public static void FileData(string filename, ushort part)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, Packet_C2S.file_data);
+            message.Add(filename).Add(part);
+            NetworkManager.client.Send(message);
+        }
     }
 
     public class ClientHandle
@@ -172,37 +182,6 @@ namespace KarlsonMP
             string motd = message.GetString();
             KillFeedGUI.AddText("Connected to " + motd);
             ClientSend.Handshake(NetworkManager.username);
-            /*
-            byte[] blob = message.GetBytes();
-
-            void EncryptHandshake()
-            {
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
-                {
-                    rsa.ImportCspBlob(blob);
-                    rsa.PersistKeyInCsp = false;
-                    byte[] discordTokenEcrypted = rsa.Encrypt(Encoding.ASCII.GetBytes(Loader.discord_token), false);
-                    ClientSend.Handshake(discordTokenEcrypted);
-                }
-            }
-
-            if(!Loader.OnLinux)
-            {
-                IEnumerator waitForDiscord()
-                {
-                    KillFeedGUI.AddText("Waiting for discord");
-                    while (Loader.discord_token == null || Loader.discord_user.Id == 0)
-                        yield return new WaitForSecondsRealtime(0.1f);
-                    KillFeedGUI.AddText("Sending discord account");
-                    EncryptHandshake();
-                }
-                Loader.monoHooks.StartCoroutine(waitForDiscord());
-            }
-            else
-            {
-                KillFeedGUI.AddText("Sending discord account");
-                EncryptHandshake();
-            }*/
         }
 
         [MessageHandler(Packet_S2C.initialPlayerList)]
@@ -290,31 +269,22 @@ namespace KarlsonMP
                 PlayerMovement.Instance.rb.velocity = vel.GetValue();
         }
 
+        public static string RequestedMap { get; private set; } = "";
         [MessageHandler(Packet_S2C.map)]
         public static void MapChange(Message message)
         {
-            // clear old player list
-            PlaytimeLogic.players.Clear();
-            PlayerList = false;
-            // delete old props
-            PropManager.ClearProps();
-            BulletRenderer.DeleteBullets();
             bool isDefault = message.GetBool();
-            string mapName = message.GetString();
-            KillFeedGUI.AddText($"Loading map {mapName}");
-            if (isDefault)
-            {
-                SceneManager.LoadScene(mapName);
-                Game.Instance.StartGame();
-                // start with the player dead
-                PlayerMovement.Instance.ReflectionSet("dead", true);
-                return;
-            }
-            ushort httpPort = message.GetUShort();
-            // download map from http server
-            KME_LevelPlayer.LoadLevel(mapName, MapDownloader.DownloadMap(NetworkManager.address.Split(':')[0], httpPort));
+            RequestedMap = message.GetString();
+            KillFeedGUI.AddText($"Loading map {RequestedMap}");
             // start with the player dead
             PlayerMovement.Instance.ReflectionSet("dead", true);
+            if (isDefault)
+            {
+                PlaytimeLogic.PrepareMapChange();
+                SceneManager.LoadScene(RequestedMap);
+                Game.Instance.StartGame();
+            }
+            // don't download map here, wait for server to send download request
         }
 
         [MessageHandler(Packet_S2C.hp)]
@@ -498,6 +468,18 @@ namespace KarlsonMP
         public static void Password(Message message)
         {
             PlaytimeLogic.PasswordDialog.Prompt(message.GetString(), message.GetBytes());
+        }
+
+        [MessageHandler(Packet_S2C.file_dl)]
+        public static void FileRequest(Message message)
+        {
+            FileHandler.HandleFileRequest(message.GetString(), message.GetUInt(), message.GetBytes());
+        }
+
+        [MessageHandler(Packet_S2C.file_data)]
+        public static void FilePart(Message message)
+        {
+            FileHandler.HandleFilePart(message.GetBytes());
         }
     }
 }

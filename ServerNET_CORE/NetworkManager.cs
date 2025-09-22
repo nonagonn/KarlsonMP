@@ -10,6 +10,7 @@ using System.IO;
 using ServerKMP.GamemodeApi;
 using System.Net;
 using System.Security.Cryptography;
+using ServerNET_CORE;
 
 namespace ServerKMP
 {
@@ -69,7 +70,7 @@ namespace ServerKMP
         }
     }
 
-    
+
     public static class Packet_S2C
     {
         public const ushort handshake = 1; // handshake, send MOTD
@@ -91,22 +92,25 @@ namespace ServerKMP
         public const ushort hudMessage = 17;
         public const ushort selfBulletColor = 18; // change own bullet color
         public const ushort showNametags = 19;
-        public const ushort weapons = 20; // give/take weapon
+        public const ushort weapons = 20; // give/remove weapon
         public const ushort collisions = 21;
-        public const ushort levelprop = 22;
-        public const ushort linkprop = 23;
-        public const ushort password = 24;
+        public const ushort levelprop = 22; // create/destroy prop
+        public const ushort linkprop = 23; // link prop to player
+        public const ushort password = 24; // for requesting a password from player
+        public const ushort file_dl = 25; // send file for download to the client (includes length and checksum)
+        public const ushort file_data = 26; // sending file part in response to client request
     }
     public static class Packet_C2S
     {
-        public const ushort handshake = 1; // handshake, send username
+        public const ushort handshake = 1; // handshake, send discord bearer
         public const ushort position = 2; // position
         public const ushort requestScene = 3; // request sync and initialPlayerList
         public const ushort shoot = 4; // client shoot
         public const ushort damage = 5; // damage report after shoot
         public const ushort chat = 6;
-        public const ushort pickup = 7;
-        public const ushort password = 8;
+        public const ushort pickup = 7; // announce prop pickup
+        public const ushort password = 8; // for sending a password to the server
+        public const ushort file_data = 9; // request file part for download
     }
 
     public class ServerHandle
@@ -156,6 +160,18 @@ namespace ServerKMP
             GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessagePassword(from, Encoding.UTF8.GetString(rsa.Decrypt(pw_enc, false)))));
             rsa.Dispose();
             NetworkManager.passwordEncryption.Remove(from);
+        }
+        [MessageHandler(Packet_C2S.file_data)]
+        public static void FileData(ushort from, Message message)
+        {
+            string fileName = message.GetString();
+            // rn we only allow downloading of the map
+            if(fileName != MapManager.currentMap!.name)
+            {
+                new MessageServerToClient.MessageFilePart(Array.Empty<byte>()).Send(from);
+                return;
+            }
+            new MessageServerToClient.MessageFilePart(FileUploader.GetMapPart(message.GetUShort())).Send(from);
         }
     }
 }

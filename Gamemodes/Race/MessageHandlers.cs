@@ -1,5 +1,6 @@
 ﻿using ServerKMP;
 using ServerKMP.GamemodeApi;
+using ServerNET_CORE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,9 +41,12 @@ namespace Race
 
             // send player current map
             if (MapManager.currentMap!.isDefault) // default map, just send scene name
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).Send(handshake.fromId);
-            else // here we need to use the pre-implemented http server
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).Send(handshake.fromId);
+                new MessageServerToClient.MessageMapChange(true, MapManager.currentMap.name).Send(handshake.fromId);
+            else
+            {
+                new MessageServerToClient.MessageMapChange(false, MapManager.currentMap.name).Send(handshake.fromId);
+                FileUploader.SendMapUploadRequest(handshake.fromId);
+            }
 
             // update scoreboard
             GamemodeEntry.UpdateScoreboard();

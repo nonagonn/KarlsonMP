@@ -216,21 +216,12 @@ namespace ServerKMP.GamemodeApi
             /// <summary>
             /// Tell client to change to vanilla scene
             /// </summary>
+            /// <param name="vanillaMap">true if map is vanilla (1Sandbox0)</param>
             /// <param name="sceneName">scene name</param>
-            public MessageMapChange(string sceneName)
+            public MessageMapChange(bool vanillaMap, string sceneName)
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.map);
-                RiptideMessage.Add(true).Add(sceneName);
-            }
-            /// <summary>
-            /// Tell client to change to custom map
-            /// </summary>
-            /// <param name="mapName">Map Name</param>
-            /// <param name="HTTP_PORT">port to use when connecting to http mapdownloader server</param>
-            public MessageMapChange(string mapName, ushort HTTP_PORT)
-            {
-                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.map);
-                RiptideMessage.Add(false).Add(mapName).Add(HTTP_PORT);
+                RiptideMessage.Add(vanillaMap).Add(sceneName);
             }
         }
         public class MessageSetHP : MessageBase_S2C
@@ -476,6 +467,34 @@ namespace ServerKMP.GamemodeApi
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.password);
                 RiptideMessage.Add(prompt).Add(cspBlob);
+            }
+        }
+
+        public class MessageFilePart : MessageBase_S2C
+        {
+            /// <summary>
+            /// Used internally by KMP. Future implementations for gamemodes will come.
+            /// </summary>
+            /// <param name="data">Data to send to the user</param>
+            public MessageFilePart(byte[] data)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.file_data);
+                RiptideMessage.Add(data);
+            }
+        }
+
+        public class MessageFileRequest : MessageBase_S2C
+        {
+            /// <summary>
+            /// Used internally by KMP. Sends a request to the client to upload a file.
+            /// </summary>
+            /// <param name="fileName">Name of the file to upload</param>
+            /// <param name="fileSize">Total size (in bytes) of the file</param>
+            /// <param name="hash">Hash of the file to check for integrity</param>
+            public MessageFileRequest(string fileName, uint fileSize, byte[] hash)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.file_dl);
+                RiptideMessage.Add(fileName).Add(fileSize).Add(hash);
             }
         }
     }

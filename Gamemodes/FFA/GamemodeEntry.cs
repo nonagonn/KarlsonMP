@@ -7,6 +7,7 @@ using ServerKMP.GamemodeApi;
 using ServerKMP;
 using System.IO.Ports;
 using System.Drawing;
+using ServerNET_CORE;
 
 namespace FFA
 {
@@ -29,6 +30,7 @@ namespace FFA
         public override void OnStart()
         {
             KMP_TaskScheduler.scheduledTasks.Clear();
+            Config.MOTD = "KarlsonMP / FFA | Map " + MapManager.currentMap!.name;
         }
         public override void OnStop()
         {
@@ -63,14 +65,19 @@ namespace FFA
         public override void OnMapChange()
         {
             if (MapManager.currentMap!.isDefault) // default map, just send scene name
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).SendToAll();
-            else // here we need to use the pre-implemented http server
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).SendToAll();
+                new MessageServerToClient.MessageMapChange(true, MapManager.currentMap.name).SendToAll();
+            else
+            { // here we need to use the file uploader.
+                new MessageServerToClient.MessageMapChange(false, MapManager.currentMap.name).SendToAll();
+                FileUploader.SendMapUploadRequest();
+            }
+                
+            Config.MOTD = "KarlsonMP / FFA | Map " + MapManager.currentMap!.name;
         }
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(GamemodeEntry.players.Select(x => (x.Key, x.Value.username, x.Value.kills, x.Value.deaths, x.Value.score)).ToList()).Compile().SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(GamemodeEntry.players.Select(x => (x.Key, x.Value.username, x.Value.kills, x.Value.deaths, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<color=#00FF00>KarlsonMP / FFA</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
         }
     }
 }

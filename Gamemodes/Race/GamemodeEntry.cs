@@ -1,5 +1,6 @@
 ﻿using ServerKMP;
 using ServerKMP.GamemodeApi;
+using ServerNET_CORE;
 
 namespace Race
 {
@@ -110,11 +111,12 @@ namespace Race
         public override void OnMapChange()
         {
             if (MapManager.currentMap!.isDefault) // default map, just send scene name
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name).SendToAll();
+                new MessageServerToClient.MessageMapChange(true, MapManager.currentMap.name).SendToAll();
             else
             {
                 // here we need to use the pre-implemented http server
-                new MessageServerToClient.MessageMapChange(MapManager.currentMap.name, Config.HTTP_PORT).SendToAll();
+                new MessageServerToClient.MessageMapChange(false, MapManager.currentMap.name).SendToAll();
+                FileUploader.SendMapUploadRequest();
                 ProcessMapData();
             }
             Config.MOTD = "KarlsonMP / Race | Map " + MapManager.currentMap.name;
@@ -122,7 +124,7 @@ namespace Race
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username, 0, 0, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<color=#00FF00>KarlsonMP / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", 0, 0, 0).Compile().SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username, 0, 0, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<color=#00FF00>KarlsonMP / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
         }
 
         static void DrawBox(Zone zone, Vector3 color)

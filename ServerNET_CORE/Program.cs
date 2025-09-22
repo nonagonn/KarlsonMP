@@ -31,7 +31,6 @@ namespace ServerKMP
 
             CommandManager.Init();
             MapManager.Init();
-            MapDownloader.Init();
             while (serverRunning)
             {
                 string command = Console.ReadLine()!;
