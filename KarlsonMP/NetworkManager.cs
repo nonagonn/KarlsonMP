@@ -298,6 +298,7 @@ namespace KarlsonMP
             PlayerList = false;
             // delete old props
             PropManager.ClearProps();
+            BulletRenderer.DeleteBullets();
             bool isDefault = message.GetBool();
             string mapName = message.GetString();
             KillFeedGUI.AddText($"Loading map {mapName}");

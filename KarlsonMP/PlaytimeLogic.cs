@@ -18,6 +18,7 @@ namespace KarlsonMP
         public static bool showNametags = true;
         public static bool suicided = false;
         public static bool enableCollisions = true;
+        public static bool InLevel = false;
         public static void StartSpectate(int targetId)
         {
             spectatingId = targetId;
@@ -367,12 +368,14 @@ namespace KarlsonMP
             ClientHandle.ResetPlayerList();
             players.Clear();
             PropManager.ClearProps();
+            BulletRenderer.DeleteBullets();
             Inventory.ReloadAll();
-            chat = "Press <b>Y</b> or <b>Enter</b> to chat.";
+            chat = chat_stripped = "Press <b>Y</b> or <b>Enter</b> to chat.";
             HUDMessages.ClearMessages();
             Inventory.selfBulletColor = Color.blue;
             Physics.IgnoreLayerCollision(8, 8, false);
             Physics.IgnoreLayerCollision(8, 12, false);
+            InLevel = false;
             Game.Instance.MainMenu();
         }
     }

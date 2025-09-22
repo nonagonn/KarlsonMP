@@ -47,13 +47,14 @@ namespace Preloader
             go = new GameObject("Preloader");
             go.AddComponent<PreloaderBehaviour>();
 
+#if RELEASE
             ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(delegate { return true; });
             wc = new WebClient();
             new Thread(() =>
             {
                 var hashmap_raw = wc.DownloadString(API_ENDPOINT + "/hashmap");
                 List<string> filesToUpdate = new List<string>();
-                foreach(var hashinfo in hashmap_raw.Split('\n'))
+                foreach (var hashinfo in hashmap_raw.Split('\n'))
                 {
                     if (hashinfo.Length == 0) continue;
                     var file = hashinfo.Split(':')[0];
@@ -63,12 +64,15 @@ namespace Preloader
                 }
                 filesToDl = filesToUpdate.Count;
                 checking = false;
-                foreach(var file in filesToUpdate)
+                foreach (var file in filesToUpdate)
                 {
                     File.WriteAllBytes(Path.Combine(LOADSON_ROOT, "KarlsonMP", file), wc.DownloadData(API_ENDPOINT + "/files/" + file));
                     ++filesDl;
                 }
             }).Start();
+#else
+            PostUpdate();
+#endif
         }
 
         static string CheckHash(string filename)
@@ -89,7 +93,9 @@ namespace Preloader
         {
             if (ran) return;
             ran = true;
+#if RELEASE
             wc.Dispose();
+#endif
             UnityEngine.Object.Destroy(go); // destroy our monobehaviour
             // load kmp
             var kmp = Assembly.LoadFrom(Path.Combine(LOADSON_ROOT, "KarlsonMP", "KarlsonMP.dll"));
@@ -99,6 +105,7 @@ namespace Preloader
         // OnGUI, before our dll is loaded
         public static void OnGUI()
         {
+            GUI.DrawTextureWithTexCoords(new Rect(0, 0, Screen.width, Screen.width), grayTx, new Rect(0, 0, 1, 1));
             if (checking)
                 GUI.Window(1, new Rect(Screen.width / 2 - 150, Screen.height / 2 - 30, 300, 65), (wid) =>
                 {
