@@ -12,8 +12,8 @@ namespace DevKit
     class Program
     {
         static readonly Dictionary<string, string> Download = new Dictionary<string, string> {
-            { "RiptideNetworking.dll",  "https://github.com/RiptideNetworking/Riptide/releases/download/v2.0.0/RiptideNetworking.dll" },
-            { "RiptideNetworking.xml",  "https://github.com/RiptideNetworking/Riptide/releases/download/v2.0.0/RiptideNetworking.xml" },
+            { "RiptideNetworking.dll",  "https://github.com/devilExE3/RiptideKMP/releases/download/v2.2.1/RiptideNetworking.dll" },
+            { "RiptideNetworking.xml",  "https://github.com/devilExE3/RiptideKMP/releases/download/v2.2.1/RiptideNetworking.xml" },
         };
 
         [STAThread]
