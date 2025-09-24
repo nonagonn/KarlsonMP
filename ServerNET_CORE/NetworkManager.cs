@@ -146,6 +146,8 @@ namespace ServerKMP
         [MessageHandler(Packet_C2S.password)]
         public static void Password(ushort from, Message message)
         {
+            if (!NetworkManager.passwordEncryption.ContainsKey(from))
+                return; // bad packet
             byte[] pw_enc = message.GetBytes();
             if(pw_enc.Length == 0)
             {

@@ -104,6 +104,11 @@ namespace Race
                 var args = chat.message.Split(' ');
                 if (args[0] == "!r")
                 {
+                    if (GamemodeEntry.players[chat.fromId].spectating != 0)
+                    {
+                        GamemodeEntry.players[chat.fromId].spectating = 0;
+                        GamemodeEntry.UpdateScoreboard();
+                    }
                     GamemodeEntry.players[chat.fromId].RespawnPlayer();
                 }
                 if (args[0] == "!w")
@@ -119,6 +124,63 @@ namespace Race
                         GamemodeEntry.players[chat.fromId].TakeWeapons();
                         new MessageServerToClient.MessageChatMessage("Weapons: <color=red>disabled</color>.").Send(chat.fromId);
                     }
+                }
+                if (args[0] == "!hp")
+                {
+                    GamemodeEntry.players[chat.fromId].show_hp = !GamemodeEntry.players[chat.fromId].show_hp;
+                    if (GamemodeEntry.players[chat.fromId].show_hp)
+                    {
+                        new MessageServerToClient.MessageSetHP(101).Send(chat.fromId);
+                        new MessageServerToClient.MessageChatMessage("HP bar: <color=green>enabled</color>.").Send(chat.fromId);
+                    }
+                    else
+                    {
+                        new MessageServerToClient.MessageSetHP(0).Send(chat.fromId);
+                        new MessageServerToClient.MessageChatMessage("HP bar: <color=red>disabled</color>.").Send(chat.fromId);
+                    }
+                }
+                if (args[0] == "!s")
+                {
+                    GamemodeEntry.players[chat.fromId].sounds = !GamemodeEntry.players[chat.fromId].sounds;
+                    if (GamemodeEntry.players[chat.fromId].sounds)
+                    {
+                        new MessageServerToClient.MessageChatMessage("Sounds: <color=green>enabled</color>.").Send(chat.fromId);
+                    }
+                    else
+                    {
+                        new MessageServerToClient.MessageChatMessage("Sounds: <color=red>disabled</color>.").Send(chat.fromId);
+                    }
+                }
+                if (args[0] == "!spec")
+                {
+                    if(args.Length != 2)
+                    {
+                        new MessageServerToClient.MessageChatMessage("!spec <id>").Send(chat.fromId);
+                        return;
+                    }
+                    ushort target;
+                    if(!ushort.TryParse(args[1], out target) || target == chat.fromId)
+                    {
+                        new MessageServerToClient.MessageChatMessage("Invalid ID!").Send(chat.fromId);
+                        return;
+                    }
+                    if (GamemodeEntry.players[target].spectating != 0)
+                    {
+                        new MessageServerToClient.MessageChatMessage($"{GamemodeEntry.players[target].username} is spectating {GamemodeEntry.players[GamemodeEntry.players[target].spectating].username} (ID {GamemodeEntry.players[target].spectating})").Send(chat.fromId);
+                        target = GamemodeEntry.players[target].spectating;
+                        return;
+                    }
+                    GamemodeEntry.players[chat.fromId].EnterSpectate(target);
+                    // for all players that were spectating me, enter them spec on my new target
+                    foreach (var p in GamemodeEntry.players)
+                    {
+                        if(p.Value.spectating == chat.fromId)
+                        {
+                            new MessageServerToClient.MessageChatMessage($"{GamemodeEntry.players[chat.fromId].username} is now spectating {GamemodeEntry.players[target].username} (ID {target})").Send(p.Key);
+                            p.Value.EnterSpectate(target);
+                        }
+                    }
+                    GamemodeEntry.UpdateScoreboard();
                 }
                 if (args[0] == "!admin")
                 {
@@ -168,9 +230,20 @@ namespace Race
             => Pickup((MessageClientToServer.MessagePickup)_base);
         public static void Pickup(MessageClientToServer.MessagePickup pickup)
         {
-            new MessageServerToClient.MessageChatMessage($"<color=yellow><b>»</b> <b>{GamemodeEntry.players[pickup.fromId].username}</b> finished the level in {FormatTime((int)(DateTime.Now - GamemodeEntry.players[pickup.fromId].lastTimeInZone).TotalMilliseconds)}.</color>").SendToAll();
+            if (GamemodeEntry.players[pickup.fromId].spectating != 0)
+                return; // we are spectating
+            int time = (int)(DateTime.Now - GamemodeEntry.players[pickup.fromId].lastTimeInZone).TotalMilliseconds;
+            new MessageServerToClient.MessageChatMessage($"<color=yellow><b>»</b> <b>{GamemodeEntry.players[pickup.fromId].username}</b> finished the level in {FormatTime(time)}.</color>").SendToAll();
+            // send soundfx to player
+            if (GamemodeEntry.players[pickup.fromId].sounds)
+                new MessageServerToClient.MessageConfirmKill(0).Send(pickup.fromId);
             GamemodeEntry.players[pickup.fromId].RespawnPlayer();
             GamemodeEntry.players[pickup.fromId].score++;
+            if (time < GamemodeEntry.players[pickup.fromId].pb || GamemodeEntry.players[pickup.fromId].pb == 0)
+            {
+                GamemodeEntry.players[pickup.fromId].pb = time;
+                new MessageServerToClient.MessageChatMessage($"<color=magenta><b>»</b> You set a new PB!</color>").Send(pickup.fromId);
+            }
             GamemodeEntry.UpdateScoreboard();
         }
 

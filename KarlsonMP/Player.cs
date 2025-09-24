@@ -91,7 +91,8 @@ namespace KarlsonMP
         }
 
         private bool crouch, moving, grounded;
-        private float animation_rotX, coll_oldRotX = 0f;
+        public float animation_rotX { get; private set; }
+        private float coll_oldRotX = 0f;
         private int animFix = 0;
 
         private static readonly Vector3 neck_Position = new Vector3(0, 0.01452795f, -5.94288e-10f), shouldl_Position = new Vector3(0.006016217f, 0.009278628f, 0.0007523113f), shouldr_Position = new Vector3(-0.0061f, 0.0088f, 0.0026f);

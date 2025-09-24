@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Diagnostics;
 using UnityEngine.SceneManagement;
 
 namespace KarlsonMP
@@ -19,8 +20,12 @@ namespace KarlsonMP
         public static bool suicided = false;
         public static bool enableCollisions = true;
         public static bool InLevel = false;
+        public static float specOffset = 0f;
         public static void StartSpectate(int targetId)
         {
+            // set dead
+            PlayerMovement.Instance.ReflectionSet("dead", true);
+            specOffset = 10f;
             spectatingId = targetId;
             GameObject.Find("Camera/Main Camera/GunCam").SetActive(false);
         }
@@ -28,6 +33,8 @@ namespace KarlsonMP
         {
             spectatingId = 0;
             GameObject.Find("Camera/Main Camera/GunCam").SetActive(true);
+            foreach (var p in players)
+                p.player.SetActive(true);
         }
 
         public static void ForcePause(bool toggle)
@@ -65,18 +72,43 @@ namespace KarlsonMP
 
             if (spectatingId != 0)
             {
-                float num = Input.GetAxis("Mouse X") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
-                float num2 = Input.GetAxis("Mouse Y") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
+                if (Input.mouseScrollDelta.y > 0 && specOffset > 0)
+                    specOffset -= 1f;
+                if (Input.mouseScrollDelta.y < 0 && specOffset < 10)
+                    specOffset += 1f;
                 var playerCam = PlayerMovement.Instance.playerCam;
-                float desiredX = playerCam.transform.localRotation.eulerAngles.y + num;
-                float xRotation = playerCam.transform.localRotation.eulerAngles.x - num2;
-                if (xRotation > 180f) xRotation -= 360f;
-                xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-                playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0f);
-                if(spectatingId != NetworkManager.client.Id)
+                if (specOffset > 0)
                 {
-                    var player = (from x in PlaytimeLogic.players where x.id == spectatingId select x).First();
-                    PlayerMovement.Instance.transform.position = player.player.transform.position - playerCam.transform.forward * 10f;
+                    float num = Input.GetAxis("Mouse X") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
+                    float num2 = Input.GetAxis("Mouse Y") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
+                    float desiredX = playerCam.transform.localRotation.eulerAngles.y + num;
+                    float xRotation = playerCam.transform.localRotation.eulerAngles.x - num2;
+                    if (xRotation > 180f) xRotation -= 360f;
+                    xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+                    playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0f);
+                }
+                else
+                {
+                    var player = (from x in PlaytimeLogic.players where x.id == spectatingId select x).FirstOrDefault();
+                    if (player != null)
+                        playerCam.transform.localRotation = Quaternion.Euler(player.animation_rotX, player.player.transform.rotation.eulerAngles.y, 0);
+                }
+                if (spectatingId != NetworkManager.client.Id)
+                {
+                    var player = (from x in PlaytimeLogic.players where x.id == spectatingId select x).FirstOrDefault();
+                    if (player != null)
+                    {
+                        if (specOffset > 0)
+                        {
+                            PlayerMovement.Instance.transform.position = player.player.transform.position - playerCam.transform.forward * specOffset;
+                            player.player.SetActive(true);
+                        }
+                        else
+                        {
+                            PlayerMovement.Instance.transform.position = player.playerCollider.transform.position;
+                            player.player.SetActive(false);
+                        }
+                    }
                 }
                 else
                 {
@@ -95,10 +127,6 @@ namespace KarlsonMP
             {
                 if (Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.Return))
                     chatOpened = true;
-                if(Input.GetKeyDown(KeyCode.P))
-                {
-                    PasswordDialog.Prompt("", Array.Empty<byte>());
-                }
             }
 
             if (paused)
@@ -136,7 +164,8 @@ namespace KarlsonMP
                 }
             }
 
-            ClientSend.PositionData();
+            if(spectatingId == 0)
+                ClientSend.PositionData();
         }
 
         public static void PrepareMapChange()
@@ -326,7 +355,7 @@ namespace KarlsonMP
             {
                 GUI.Label(new Rect(50f, Screen.height - 110f, 150f, 70f), $"<size=50><color=green><b>+</b></color> {hp}</size>");
                 GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f, 20f), hpBar_black);
-                GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f * hp / 100f, 20f), hpBar_green);
+                GUI.DrawTexture(new Rect(50f, Screen.height - 45f, Mathf.Clamp(135f * hp / 100f, 0f, 135f), 20f), hpBar_green);
             }
 
             // draw names

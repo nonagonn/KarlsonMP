@@ -12,12 +12,16 @@ namespace Race
     {
         public ushort id;
         public string username;
-        public int spectating = 0;
+        public ushort spectating = 0;
         public bool admin;
         public Vector3 lastPos;
         public DateTime lastTimeInZone;
         public int score;
         public bool weapons;
+        public bool show_hp;
+        public bool in_zone;
+        public bool sounds;
+        public int pb;
 
         public Player(ushort _id, string _username)
         {
@@ -27,6 +31,10 @@ namespace Race
             score = 0;
             admin = false;
             weapons = true;
+            show_hp = true;
+            in_zone = false;
+            sounds = true;
+            pb = 0;
         }
 
         public void SetUsername(string _username)
@@ -42,12 +50,16 @@ namespace Race
 
         public void TakeWeapons()
         {
-            new MessageServerToClient.MessageGiveTakeWeapon(1).Send(id);
+            new MessageServerToClient.MessageGiveTakeWeapon(0).Send(id);
             new MessageServerToClient.MessageGiveTakeWeapon(0).Send(id);
         }
 
         public void RespawnPlayer()
         {
+            if (show_hp)
+                new MessageServerToClient.MessageSetHP(101).Send(id);
+            else
+                new MessageServerToClient.MessageSetHP(0).Send(id);
             var pos = MapManager.currentMap!.map_data["spawn"][0];
             new MessageServerToClient.MessageRespawn(pos.Item2).Send(id);
             if (weapons)
@@ -58,6 +70,8 @@ namespace Race
         {
             new MessageServerToClient.MessageSpectate(target).Send(id);
             spectating = target;
+
+            new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, $"<size=25>Spectating {GamemodeEntry.players[target].username}</size>").Send(id);
 
             // send fake position
             new MessageServerToClient.MessagePositionData(id, new Vector3(30000f, 30000f, 30000f), Vector2.zero, false, false, false).SendToAll(id);
@@ -73,6 +87,13 @@ namespace Race
             admin = true;
             username = "<color=#ee4444>(A)</color> <color=#ff9494>" + username + "</color>";
             new MessageServerToClient.MessageChatMessage($"<color=#c56cf5><b>»</b> {username} is now an admin</color>").SendToAll();
+        }
+
+        public string GetPbTime()
+        {
+            if (pb == 0)
+                return " <color=yellow>[No PB set]</color>";
+            return $" <color=yellow>[{MessageHandlers.FormatTime(pb)}]</color>";
         }
 
         public void Destroy()

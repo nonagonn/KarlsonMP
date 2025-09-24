@@ -46,7 +46,8 @@ namespace FFA
             }
             else
             {
-                messageHandlers[message.RiptideId](message);
+                if (message.RiptideId == Packet_C2S.handshake || players.ContainsKey(message.fromId))
+                    messageHandlers[message.RiptideId](message);
             }
         }
 

@@ -69,9 +69,12 @@ namespace KarlsonMP
                 if(score.id != ushort.MaxValue)
                 {
                     GUI.Label(new Rect(basex + 5f, basey + yOff, 50f, 30f), score.id.ToString(), hAlign);
-                    GUI.Label(new Rect(basex + 350f, basey + yOff, 100f, 30f), score.kills.ToString(), hAlign);
-                    GUI.Label(new Rect(basex + 400f, basey + yOff, 100f, 30f), score.deaths.ToString(), hAlign);
-                    GUI.Label(new Rect(basex + 450f, basey + yOff, 100f, 30f), score.score.ToString(), hAlign);
+                    if(score.kills != int.MinValue)
+                        GUI.Label(new Rect(basex + 350f, basey + yOff, 100f, 30f), score.kills.ToString(), hAlign);
+                    if (score.deaths != int.MinValue)
+                        GUI.Label(new Rect(basex + 400f, basey + yOff, 100f, 30f), score.deaths.ToString(), hAlign);
+                    if (score.score != int.MinValue)
+                        GUI.Label(new Rect(basex + 450f, basey + yOff, 100f, 30f), score.score.ToString(), hAlign);
                 }
                 GUI.Label(new Rect(basex + 60f, basey + yOff, 300f, 30f), score.name, hAlign);
                 yOff += 30f;

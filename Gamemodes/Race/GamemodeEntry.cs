@@ -6,6 +6,8 @@ namespace Race
 {
     public class GamemodeEntry : Gamemode
     {
+        const string SERVER_NAME = "KarlsonMP";
+
         private static Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>> messageHandlers = new Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>>
             {
                 { Packet_C2S.handshake, MessageHandlers.Handshake },
@@ -23,8 +25,8 @@ namespace Race
         void DrawZones()
         {
             DrawBox(RaceData.startZone, new Vector3(0, 1, 0));
-            foreach (var z in RaceData.teleports)
-                DrawBox(z.Item1, new Vector3(1, 1, 0));
+            //foreach (var z in RaceData.teleports)
+            //    DrawBox(z.Item1, new Vector3(1, 1, 0));
             KMP_TaskScheduler.Schedule(DrawZones, DateTime.Now.AddMilliseconds(250));
         }
 
@@ -32,9 +34,9 @@ namespace Race
         {
             KMP_TaskScheduler.scheduledTasks.Clear();
             DrawZones();
-            if(!MapManager.currentMap!.isDefault)
+            if (!MapManager.currentMap!.isDefault)
                 ProcessMapData();
-            Config.MOTD = "KarlsonMP / Race | Map " + MapManager.currentMap!.name;
+            Config.MOTD = SERVER_NAME + " / Race | Map " + MapManager.currentMap!.name;
         }
         public override void OnStop()
         {
@@ -50,12 +52,22 @@ namespace Race
             }
             else
             {
-                messageHandlers[message.RiptideId](message);
+                if (message.RiptideId == Packet_C2S.handshake || players.ContainsKey(message.fromId))
+                    messageHandlers[message.RiptideId](message);
             }
         }
 
         public override void OnPlayerDisconnect(ushort id)
         {
+            // check for all players that were spectating him
+            foreach (var p in GamemodeEntry.players)
+            {
+                if (p.Value.spectating == id)
+                {
+                    p.Value.spectating = 0;
+                    p.Value.RespawnPlayer();
+                }
+            }
             new MessageServerToClient.MessageKillFeed($"<color=red>({id}) {players[id].username} disconnected</color>").SendToAll();
             players[id].Destroy();
             players.Remove(id);
@@ -119,12 +131,12 @@ namespace Race
                 FileUploader.SendMapUploadRequest();
                 ProcessMapData();
             }
-            Config.MOTD = "KarlsonMP / Race | Map " + MapManager.currentMap.name;
+            Config.MOTD = SERVER_NAME + " / Race | Map " + MapManager.currentMap.name;
         }
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username, 0, 0, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, $"<color=#00FF00>KarlsonMP / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username + x.Value.GetPbTime() + (x.Value.spectating == 0 ? "" : " <color=#00ffff>[spectating " + players[x.Value.spectating].username + "]</color>"), int.MinValue, int.MinValue, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, "<color=#00FF00>" + SERVER_NAME + $" / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
         }
 
         static void DrawBox(Zone zone, Vector3 color)
@@ -149,14 +161,36 @@ namespace Race
         {
             foreach (var player in players)
             {
+                if (player.Value.spectating != 0) continue;
                 // if in start zone, update player's last zone time
                 if (RaceData.startZone.Inside(player.Value.lastPos))
                 {
                     player.Value.lastTimeInZone = DateTime.Now;
                     new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, "<size=25><color=gray>In starting zone</color></size>").Send(player.Key);
+                    if (!player.Value.in_zone)
+                    {
+                        // fx when leaving start zone
+                        if (player.Value.show_hp)
+                            new MessageServerToClient.MessageSetHP(101).Send(player.Key);
+                        else
+                            new MessageServerToClient.MessageSetHP(0).Send(player.Key);
+                        player.Value.in_zone = true;
+                    }
                 }
                 else
                 {
+                    if (player.Value.in_zone)
+                    {
+                        // fx when leaving start zone
+                        if (players[player.Key].sounds)
+                        {
+                            if (player.Value.show_hp)
+                                new MessageServerToClient.MessageSetHP(100).Send(player.Key);
+                            else
+                                new MessageServerToClient.MessageSetHP(-1).Send(player.Key);
+                        }
+                        player.Value.in_zone = false;
+                    }
                     int ms = (int)(DateTime.Now - player.Value.lastTimeInZone).TotalMilliseconds;
                     new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, $"<size=35>{ms / 60000:D2}:{ms / 1000 % 60:D2}</size><size=22px>.{ms % 1000:D3}</size>").Send(player.Key);
                 }
