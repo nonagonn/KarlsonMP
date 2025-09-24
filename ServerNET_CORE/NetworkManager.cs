@@ -113,9 +113,8 @@ namespace ServerKMP
         public const ushort file_data = 9; // request file part for download
     }
 
-    public class ServerHandle
+    public static class ServerHandle
     {
-        // TODO: authenticate user in handshake, and pass to legacy
         [MessageHandler(Packet_C2S.handshake)]
         public static void Handshake(ushort from, Message message)
         {

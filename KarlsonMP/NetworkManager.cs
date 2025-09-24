@@ -408,10 +408,10 @@ namespace KarlsonMP
         public static void ShowNametags(Message message)
         {
             bool toggle = message.GetBool();
-            if(message.UnreadLength > 0)
+            if(message.UnreadBits > 0)
             {
                 // player list toggle
-                while(message.UnreadLength > 0)
+                while(message.UnreadBits > 0)
                 {
                     ushort pid = message.GetUShort();
                     var p = (from x in PlaytimeLogic.players where x.id == pid select x).FirstOrDefault();

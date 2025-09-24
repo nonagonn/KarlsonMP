@@ -38,12 +38,32 @@ namespace KarlsonMP
             chatOpened = false;
         }
 
+        static bool NetStatsOpen = false;
+        static float SendRate, SendRateMsg, RecvRate, RecvRateMsg, NetStatsTimeSinceLastUpdate = 0;
+
         public static void Update()
         {
             if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
                 return;
 
-            if(spectatingId != 0)
+            if (Input.GetKeyDown(KeyCode.F5))
+                NetStatsOpen = !NetStatsOpen;
+            if(NetStatsOpen)
+            {
+                NetStatsTimeSinceLastUpdate += Time.deltaTime;
+                if (NetStatsTimeSinceLastUpdate >= 0.5f)
+                {
+                    (SendRate, SendRateMsg) = NetworkManager.client.Connection.Metrics.SendRate();
+                    SendRate /= NetStatsTimeSinceLastUpdate;
+                    SendRateMsg /= NetStatsTimeSinceLastUpdate;
+                    (RecvRate, RecvRateMsg) = NetworkManager.client.Connection.Metrics.RecvRate();
+                    RecvRate /= NetStatsTimeSinceLastUpdate;
+                    RecvRateMsg /= NetStatsTimeSinceLastUpdate;
+                    NetStatsTimeSinceLastUpdate = 0;
+                }
+            }
+
+            if (spectatingId != 0)
             {
                 float num = Input.GetAxis("Mouse X") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
                 float num2 = Input.GetAxis("Mouse Y") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
@@ -294,13 +314,15 @@ namespace KarlsonMP
             return s.Replace("</color>", "");
         }
 
+        static readonly (int, int)[] chatOutline = new (int, int)[] { (-2, -1), (-2, 0), (-2, 1), (-1, -2), (-1, -1), (-1, 0), (-1, 1), (-1, 2), (0, -2), (0, -1), (0, 1), (0, 2), (1, -2), (1, -1), (1, 0), (1, 1), (1, 2), (2, -1), (2, 0), (2, 1) };
+
         public static void OnGUI()
         {
             if (PasswordDialog.Opened)
                 password.draw();
             if (!ClientHandle.PlayerList) return;
             // hp
-            if(spectatingId == 0)
+            if(spectatingId == 0 && hp > 0)
             {
                 GUI.Label(new Rect(50f, Screen.height - 110f, 150f, 70f), $"<size=50><color=green><b>+</b></color> {hp}</size>");
                 GUI.DrawTexture(new Rect(50f, Screen.height - 45f, 135f, 20f), hpBar_black);
@@ -315,10 +337,12 @@ namespace KarlsonMP
 
                 var dist = Vector3.Distance(p.player.transform.position, PlayerMovement.Instance.transform.position);
                 Vector3 pos = Camera.main.WorldToScreenPoint(p.player.transform.position + new Vector3(0f, 0.5f + dist * 0.01f, 0f));
+                // TODO: make nametag distance variable server-controller
                 if (dist >= 50f)
                     continue; // player is too far
                 if (pos.z < 0)
                     continue; // point is behind our camera
+                // TODO: check if we have line of sight to the player maybe?
                 Vector2 textSize = GUI.skin.label.CalcSize(new GUIContent(text));
                 textSize.x += 10f;
                 GUI.Label(new Rect(pos.x - textSize.x / 2, (Screen.height - pos.y) - textSize.y / 2, textSize.x, textSize.y), text, nameStyle);
@@ -327,32 +351,40 @@ namespace KarlsonMP
             if (showDebug)
                 GUI.Label(new Rect(Screen.width - 78f, Screen.height - 35f, 100f, 20f), $"<color=white>RTT: {NetworkManager.client.SmoothRTT}</color>");
 
-            // chat
-            var sz = GUI.skin.label.CalcSize(new GUIContent(chat));
-            for (int i = -2; i <= 2; i++)
-                for(int j = -2; j <= 2; j++)
-                {
-                    if(i == 0 && j == 0) continue;
-                    GUI.Label(new Rect(5 + i, 25 + j, sz.x + 10, sz.y + 10), "<color=black>" + chat_stripped + "</color>");
-                }
-            GUI.Label(new Rect(5f, 25f, sz.x + 10, sz.y + 10), chat);
-            if (chatOpened)
+            if(NetStatsOpen)
             {
-                GUI.SetNextControlName("chatcontrol");
-                chatContent = GUI.TextArea(new Rect(0f, Math.Max(30f + sz.y, 265f), 500f, 20f), chatContent);
-                GUI.FocusControl("chatcontrol");
-                if(chatContent.Contains('\n'))
+                GUI.Label(new Rect(5f, 25f, Screen.width, Screen.height), $"<size=25>[Network Statistics]\n" +
+                    $"Received messages: {NetworkManager.client.Connection.Metrics.MessagesIn} ({NetworkManager.client.Connection.Metrics.BytesIn} bytes)\n" +
+                    $"Sent messages: {NetworkManager.client.Connection.Metrics.MessagesOut} ({NetworkManager.client.Connection.Metrics.BytesOut} bytes)\n" +
+                    $"Send rate: {SendRate / 1000:0.00}kB/s ({SendRateMsg:0.00}msg/s)\n" +
+                    $"Recv rate: {RecvRate / 1000:0.00}kB/s ({RecvRateMsg:0.00}msg/s)\n" +
+                    $"RTT: {NetworkManager.client.RTT}ms (avg {NetworkManager.client.SmoothRTT}ms)</size>");
+            }
+            else
+            {
+                // chat
+                var sz = GUI.skin.label.CalcSize(new GUIContent(chat));
+                foreach((int i, int j) in chatOutline)
+                    GUI.Label(new Rect(5 + i, 25 + j, sz.x + 10, sz.y + 10), "<color=black>" + chat_stripped + "</color>");
+                GUI.Label(new Rect(5f, 25f, sz.x + 10, sz.y + 10), chat);
+                if (chatOpened)
                 {
-                    chatContent.Replace("\n", "");
-                    if(chatContent.Trim().Length > 0)
-                        ClientSend.ChatMessage(chatContent.Trim());
-                    chatContent = "";
-                    chatOpened = false;
-                }
-                if(chatContent.Contains('`'))
-                {
-                    chatContent = "";
-                    chatOpened = false;
+                    GUI.SetNextControlName("chatcontrol");
+                    chatContent = GUI.TextArea(new Rect(0f, Math.Max(30f + sz.y, 265f), 500f, 20f), chatContent);
+                    GUI.FocusControl("chatcontrol");
+                    if (chatContent.Contains('\n'))
+                    {
+                        chatContent.Replace("\n", "");
+                        if (chatContent.Trim().Length > 0)
+                            ClientSend.ChatMessage(chatContent.Trim());
+                        chatContent = "";
+                        chatOpened = false;
+                    }
+                    if (chatContent.Contains('`'))
+                    {
+                        chatContent = "";
+                        chatOpened = false;
+                    }
                 }
             }
 
