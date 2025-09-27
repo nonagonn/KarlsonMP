@@ -21,6 +21,7 @@ namespace KarlsonMP
         public static bool enableCollisions = true;
         public static bool InLevel = false;
         public static float specOffset = 0f;
+        public static float nametagDistance = 50f;
         public static void StartSpectate(int targetId)
         {
             // set dead
@@ -28,11 +29,13 @@ namespace KarlsonMP
             specOffset = 10f;
             spectatingId = targetId;
             GameObject.Find("Camera/Main Camera/GunCam").SetActive(false);
+            PlayerMovement.Instance.GetPlayerCollider().enabled = false;
         }
         public static void ExitSpectate()
         {
             spectatingId = 0;
             GameObject.Find("Camera/Main Camera/GunCam").SetActive(true);
+            PlayerMovement.Instance.GetPlayerCollider().enabled = true;
             foreach (var p in players)
                 p.player.SetActive(true);
         }
@@ -53,6 +56,9 @@ namespace KarlsonMP
             if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
                 return;
 
+            if(ClientHandle.PlayerList)
+                KEngine.RenderFrame();
+
             if (Input.GetKeyDown(KeyCode.F5))
                 NetStatsOpen = !NetStatsOpen;
             if(NetStatsOpen)
@@ -72,15 +78,20 @@ namespace KarlsonMP
 
             if (spectatingId != 0)
             {
-                if (Input.mouseScrollDelta.y > 0 && specOffset > 0)
-                    specOffset -= 1f;
-                if (Input.mouseScrollDelta.y < 0 && specOffset < 10)
-                    specOffset += 1f;
+                if(!paused)
+                {
+                    if (Input.mouseScrollDelta.y > 0 && specOffset > 0)
+                        specOffset -= 1f;
+                    if (Input.mouseScrollDelta.y < 0 && specOffset < 10)
+                        specOffset += 1f;
+                }
                 var playerCam = PlayerMovement.Instance.playerCam;
                 if (specOffset > 0)
                 {
                     float num = Input.GetAxis("Mouse X") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
                     float num2 = Input.GetAxis("Mouse Y") * GameState.Instance.GetSensitivity() * 50f * Time.fixedDeltaTime;
+                    if (paused)
+                        num = num2 = 0;
                     float desiredX = playerCam.transform.localRotation.eulerAngles.y + num;
                     float xRotation = playerCam.transform.localRotation.eulerAngles.x - num2;
                     if (xRotation > 180f) xRotation -= 360f;
@@ -366,8 +377,7 @@ namespace KarlsonMP
 
                 var dist = Vector3.Distance(p.player.transform.position, PlayerMovement.Instance.transform.position);
                 Vector3 pos = Camera.main.WorldToScreenPoint(p.player.transform.position + new Vector3(0f, 0.5f + dist * 0.01f, 0f));
-                // TODO: make nametag distance variable server-controller
-                if (dist >= 50f)
+                if (dist >= nametagDistance)
                     continue; // player is too far
                 if (pos.z < 0)
                     continue; // point is behind our camera
@@ -387,7 +397,14 @@ namespace KarlsonMP
                     $"Sent messages: {NetworkManager.client.Connection.Metrics.MessagesOut} ({NetworkManager.client.Connection.Metrics.BytesOut} bytes)\n" +
                     $"Send rate: {SendRate / 1000:0.00}kB/s ({SendRateMsg:0.00}msg/s)\n" +
                     $"Recv rate: {RecvRate / 1000:0.00}kB/s ({RecvRateMsg:0.00}msg/s)\n" +
-                    $"RTT: {NetworkManager.client.RTT}ms (avg {NetworkManager.client.SmoothRTT}ms)</size>");
+                    $"RTT: {NetworkManager.client.RTT}ms (avg {NetworkManager.client.SmoothRTT}ms)\n\n" +
+                    $"[KMP_Engine Debug]\n" +
+                    $"KTickManager:\n" +
+                    $"ServerTick: {KTickManager.debug_ServerTick}\n" +
+                    $"DT: {Time.deltaTime}\n" +
+                    $"RenderTick: {KTickManager.debug_RenderTick}\n" +
+                    $"Subtick: {KTickManager.debug_subtick}\n" +
+                    $"Interp Ratio: {KTickManager.debug_interpRatio}</size>");
             }
             else
             {
@@ -435,6 +452,7 @@ namespace KarlsonMP
 
         public static void DisconnectToBrowser()
         {
+            // reset everything and prepare for next server
             NetworkManager.Quit();
             paused = false;
             NetworkManager.client = null;
@@ -449,6 +467,9 @@ namespace KarlsonMP
             Physics.IgnoreLayerCollision(8, 8, false);
             Physics.IgnoreLayerCollision(8, 12, false);
             InLevel = false;
+            CrouchFixes.Reset();
+            KTickManager.Reset();
+            nametagDistance = 50f;
             Game.Instance.MainMenu();
         }
     }

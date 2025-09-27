@@ -247,6 +247,7 @@
     <Compile Include="KillFeedGUI.cs" />
     <Compile Include="KMP_Audio.cs" />
     <Compile Include="KMP_Console.cs" />
+    <Compile Include="KMP_Engine.cs" />
     <Compile Include="KMP_PrefabManager.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="KME_LevelPlayer.cs" />

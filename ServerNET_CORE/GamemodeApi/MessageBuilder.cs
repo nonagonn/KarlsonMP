@@ -178,13 +178,44 @@ namespace ServerKMP.GamemodeApi
                 RiptideMessage.Add(false).Add(id);
             }
         }
-        public class MessagePositionData : MessageBase_S2C
+        public class MessageTickData : MessageBase_S2C
         {
-            public MessagePositionData(MessageClientToServer.MessagePositionData clientMessage) : this(clientMessage.fromId, clientMessage.position, clientMessage.rotation, clientMessage.crouching, clientMessage.moving, clientMessage.grounded) { }
-            public MessagePositionData(ushort pid, Vector3 position, Vector2 rotation, bool crouching, bool moving, bool grounded)
+            List<(ushort, KObject)> players;
+            public MessageTickData()
             {
-                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.playerData);
-                RiptideMessage.Add(pid).Add(position).Add(rotation).Add(crouching).Add(moving).Add(grounded);
+                players = new List<(ushort, KObject)>();
+            }
+            public void AddPlayer(ushort id, KObject obj)
+            {
+                players.Add((id, obj));
+            }
+            public MessageTickData Compile(ulong Tick)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Unreliable, Packet_S2C.playerData);
+                RiptideMessage.Add(Tick).Add((ushort)players.Count);
+                foreach (var p in players)
+                    RiptideMessage.Add(p.Item1).Add(p.Item2.pos).Add(p.Item2.rot);
+                return this;
+            }
+        }
+        public class MessageAnimationData : MessageBase_S2C
+        {
+            List<(ushort, KPlayer)> players;
+            public MessageAnimationData()
+            {
+                players = new List<(ushort, KPlayer)>();
+            }
+            public void AddPlayer(ushort id, KPlayer player)
+            {
+                players.Add((id, player));
+            }
+            public MessageAnimationData Compile()
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Unreliable, Packet_S2C.animationData);
+                RiptideMessage.Add((ushort)players.Count);
+                foreach (var p in players)
+                    RiptideMessage.Add(p.Item1).Add(p.Item2.crouching).Add(p.Item2.moving).Add(p.Item2.grounded);
+                return this;
             }
         }
         public class MessageSendBullet : MessageBase_S2C
@@ -495,6 +526,49 @@ namespace ServerKMP.GamemodeApi
             {
                 RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.file_dl);
                 RiptideMessage.Add(fileName).Add(fileSize).Add(hash);
+            }
+        }
+
+        public class MessageSync : MessageBase_S2C
+        {
+            /// <summary>
+            /// Used internally by KMP. Syncs server tick to clients
+            /// </summary>
+            /// <param name="tick">Current tick</param>
+            public MessageSync(ulong tick)
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.sync);
+                RiptideMessage.Add(tick);
+            }
+        }
+
+        public class MessageGamerules : MessageBase_S2C
+        {
+            public static class Rules
+            {
+                public const string CrouchFixes = "CrouchFixes";
+                public const string NametagDistance = "NametagDistance";
+            }
+
+            List<(string, string)> rules;
+            public MessageGamerules()
+            {
+                rules = new List<(string, string)>();
+            }
+
+            public MessageGamerules AddRule(string key, string value)
+            {
+                rules.Add((key, value));
+                return this;
+            }
+
+            public MessageGamerules Compile()
+            {
+                RiptideMessage = Message.Create(MessageSendMode.Reliable, Packet_S2C.gamerules);
+                RiptideMessage.Add(rules.Count);
+                foreach (var rule in rules)
+                    RiptideMessage.Add(rule.Item1).Add(rule.Item2);
+                return this;
             }
         }
     }

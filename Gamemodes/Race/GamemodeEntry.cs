@@ -1,13 +1,10 @@
 ﻿using ServerKMP;
 using ServerKMP.GamemodeApi;
-using ServerNET_CORE;
 
 namespace Race
 {
     public class GamemodeEntry : Gamemode
     {
-        const string SERVER_NAME = "KarlsonMP";
-
         private static Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>> messageHandlers = new Dictionary<ushort, Action<MessageClientToServer.MessageBase_C2S>>
             {
                 { Packet_C2S.handshake, MessageHandlers.Handshake },
@@ -36,7 +33,7 @@ namespace Race
             DrawZones();
             if (!MapManager.currentMap!.isDefault)
                 ProcessMapData();
-            Config.MOTD = SERVER_NAME + " / Race | Map " + MapManager.currentMap!.name;
+            NetworkManager.MOTD = Config.MOTD + " / Race | Map " + MapManager.currentMap!.name;
         }
         public override void OnStop()
         {
@@ -131,12 +128,12 @@ namespace Race
                 FileUploader.SendMapUploadRequest();
                 ProcessMapData();
             }
-            Config.MOTD = SERVER_NAME + " / Race | Map " + MapManager.currentMap.name;
+            NetworkManager.MOTD = Config.MOTD + " / Race | Map " + MapManager.currentMap.name;
         }
 
         public static void UpdateScoreboard()
         {
-            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username + x.Value.GetPbTime() + (x.Value.spectating == 0 ? "" : " <color=#00ffff>[spectating " + players[x.Value.spectating].username + "]</color>"), int.MinValue, int.MinValue, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, "<color=#00FF00>" + SERVER_NAME + $" / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
+            new MessageServerToClient.MessageUpdateScoreboard(players.Select(x => (x.Key, x.Value.username + x.Value.GetPbTime() + (x.Value.spectating == 0 ? "" : " <color=#00ffff>[spectating " + players[x.Value.spectating].username + "]</color>"), int.MinValue, int.MinValue, x.Value.score)).ToList()).AddEntry(ushort.MaxValue, "<color=#00FF00>" + Config.MOTD + $" / Race</color> <color=#777777>●</color> Map <color=yellow>{MapManager.currentMap!.name}</color>", int.MinValue, int.MinValue, int.MinValue).Compile().SendToAll();
         }
 
         static void DrawBox(Zone zone, Vector3 color)
@@ -163,17 +160,12 @@ namespace Race
             {
                 if (player.Value.spectating != 0) continue;
                 // if in start zone, update player's last zone time
-                if (RaceData.startZone.Inside(player.Value.lastPos))
+                if (RaceData.startZone.Inside(TickManager.netObjects[player.Key].pos))
                 {
                     player.Value.lastTimeInZone = DateTime.Now;
                     new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, "<size=25><color=gray>In starting zone</color></size>").Send(player.Key);
                     if (!player.Value.in_zone)
                     {
-                        // fx when leaving start zone
-                        if (player.Value.show_hp)
-                            new MessageServerToClient.MessageSetHP(101).Send(player.Key);
-                        else
-                            new MessageServerToClient.MessageSetHP(0).Send(player.Key);
                         player.Value.in_zone = true;
                     }
                 }
@@ -181,14 +173,6 @@ namespace Race
                 {
                     if (player.Value.in_zone)
                     {
-                        // fx when leaving start zone
-                        if (players[player.Key].sounds)
-                        {
-                            if (player.Value.show_hp)
-                                new MessageServerToClient.MessageSetHP(100).Send(player.Key);
-                            else
-                                new MessageServerToClient.MessageSetHP(-1).Send(player.Key);
-                        }
                         player.Value.in_zone = false;
                     }
                     int ms = (int)(DateTime.Now - player.Value.lastTimeInZone).TotalMilliseconds;
@@ -197,7 +181,7 @@ namespace Race
                 // check for tp zones
                 foreach (var z in RaceData.teleports)
                 {
-                    if (z.Item1.Inside(player.Value.lastPos))
+                    if (z.Item1.Inside(TickManager.netObjects[player.Key].pos))
                         new MessageServerToClient.MessageTeleport(z.Item2, MessageComponents.Optional_Vector2.none, Vector3.zero).Send(player.Key);
                 }
             }

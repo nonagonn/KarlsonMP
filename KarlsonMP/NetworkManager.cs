@@ -81,6 +81,9 @@ namespace KarlsonMP
         public const ushort password = 24; // for requesting a password from player
         public const ushort file_dl = 25; // send file for download to the client (includes length and checksum)
         public const ushort file_data = 26; // sending file part in response to client request
+        public const ushort sync = 27; // sync current tick to client
+        public const ushort animationData = 28; // send animation data to clients (doesn't need to be interpolated)
+        public const ushort gamerules = 29; // set of constants that may be expanded later
     }
     public static class Packet_C2S
     {
@@ -180,7 +183,7 @@ namespace KarlsonMP
             if (NetworkManager.client == null || !NetworkManager.client.IsConnected)
                 return; // we shouldn't handle this packet
             string motd = message.GetString();
-            KillFeedGUI.AddText("Connected to " + motd);
+            KillFeedGUI.AddText("Connected to\n" + motd);
             ClientSend.Handshake(NetworkManager.username);
         }
 
@@ -222,16 +225,33 @@ namespace KarlsonMP
         public static void PlayerData(Message message)
         {
             if (!PlayerList) return; // no player list yet
-            ushort pid = message.GetUShort();
-            Player p = (from x in PlaytimeLogic.players where x.id == pid select x).FirstOrDefault();
-            if (p == null) return; // player doesn't exist
-            Vector3 pos = message.GetVector3();
-            Vector2 rot = message.GetVector2();
-            bool crouching = message.GetBool();
-            bool moving = message.GetBool();
-            bool grounded = message.GetBool();
-            p.Move(pos, rot);
-            p.UpdateAnimations(crouching, moving, grounded);
+            ulong Tick = message.GetULong();
+            ushort count = message.GetUShort();
+            List<KObject> objects = new List<KObject>();
+            while(count-- > 0)
+                objects.Add(new KObject(message.GetUShort(), message.GetVector3(), message.GetVector2()));
+            KTickManager.RegisterFrame(new KTick(Tick, objects));
+        }
+
+        [MessageHandler(Packet_S2C.animationData)]
+        public static void AnimationData(Message message)
+        {
+            if (!PlayerList) return;
+            ushort count = message.GetUShort();
+            while(count-- > 0)
+            {
+                var pid = message.GetUShort();
+                var p = PlaytimeLogic.players.Where(x => x.id == pid).FirstOrDefault();
+                bool crouching = message.GetBool(), moving = message.GetBool(), grounded = message.GetBool();
+                if (p != null)
+                    p.UpdateAnimations(crouching, moving, grounded);
+            }
+        }
+
+        [MessageHandler(Packet_S2C.sync)]
+        public static void Sync(Message message)
+        {
+            KTickManager.SyncTick(message.GetULong());
         }
 
         [MessageHandler(Packet_S2C.bullet)]
@@ -480,6 +500,26 @@ namespace KarlsonMP
         public static void FilePart(Message message)
         {
             FileHandler.HandleFilePart(message.GetBytes());
+        }
+
+        [MessageHandler(Packet_S2C.gamerules)]
+        public static void Gamerules(Message message)
+        {
+            int count = message.GetInt();
+            while(count-- > 0)
+            {
+                string key = message.GetString();
+                string value = message.GetString();
+                switch(key)
+                {
+                    case "CrouchFixes":
+                        CrouchFixes.Enabled = value == "1";
+                        break;
+                    case "NametagDistance":
+                        PlaytimeLogic.nametagDistance = float.Parse(value);
+                        break;
+                }
+            }
         }
     }
 }

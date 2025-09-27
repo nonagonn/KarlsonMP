@@ -1,6 +1,5 @@
 ﻿using ServerKMP;
 using ServerKMP.GamemodeApi;
-using ServerNET_CORE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +38,12 @@ namespace Race
             new MessageServerToClient.MessagePlayerJoinLeave(handshake.fromId, handshake.username).SendToAll(handshake.fromId);
             new MessageServerToClient.MessageKillFeed($"<color=green>({handshake.fromId}) {handshake.username} connected</color>").SendToAll(handshake.fromId);
 
+            // send gamerules
+            new MessageServerToClient.MessageGamerules()
+                .AddRule(MessageServerToClient.MessageGamerules.Rules.NametagDistance, "150")
+                //.AddRule(MessageServerToClient.MessageGamerules.Rules.CrouchFixes, "1") - it's enabled by default
+                .Compile().Send(handshake.fromId);
+
             // send player current map
             if (MapManager.currentMap!.isDefault) // default map, just send scene name
                 new MessageServerToClient.MessageMapChange(true, MapManager.currentMap.name).Send(handshake.fromId);
@@ -56,11 +61,7 @@ namespace Race
             => PositionData((MessageClientToServer.MessagePositionData)_base);
         public static void PositionData(MessageClientToServer.MessagePositionData positionData)
         {
-            if (GamemodeEntry.players[positionData.fromId].spectating != 0) return; // player is spectating, ignore their position
-            // broadcast position to all except client
-            new MessageServerToClient.MessagePositionData(positionData).SendToAll(positionData.fromId);
-            // here we use the constructor i conviniently created to transfer all fields from client message to server message
-            GamemodeEntry.players[positionData.fromId].lastPos = positionData.position;
+            // don't do anything here lol
         }
 
         public static void RequestScene(MessageClientToServer.MessageBase_C2S _base)
@@ -130,7 +131,7 @@ namespace Race
                     GamemodeEntry.players[chat.fromId].show_hp = !GamemodeEntry.players[chat.fromId].show_hp;
                     if (GamemodeEntry.players[chat.fromId].show_hp)
                     {
-                        new MessageServerToClient.MessageSetHP(101).Send(chat.fromId);
+                        new MessageServerToClient.MessageSetHP(100).Send(chat.fromId);
                         new MessageServerToClient.MessageChatMessage("HP bar: <color=green>enabled</color>.").Send(chat.fromId);
                     }
                     else

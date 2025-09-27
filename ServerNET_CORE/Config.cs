@@ -12,7 +12,7 @@ namespace ServerKMP
         public static void LoadConfig()
         {
             if (!File.Exists("config"))
-                File.WriteAllText("config", "#port to be used by Riptide\nport=11337\n\n#port to be used by MapDownloader\n#MapDownloader allows users to download maps from the server\n#if you don't know if you should change this, don't\nhttp_port=11338\n\n#startup gamemode\ngamemode=FFA\n\n# Server's MOTD\nmotd=<MOTD>");
+                File.WriteAllText("config", "#port to be used by Riptide\nport=11337\n\n#startup gamemode\ngamemode=FFA");
             string[] lines = File.ReadAllLines("config");
             foreach (var line in lines)
             {
@@ -26,9 +26,6 @@ namespace ServerKMP
                     case "port":
                         PORT = ushort.Parse(split[1].Trim());
                         break;
-                    case "http_port":
-                        HTTP_PORT = ushort.Parse(split[1].Trim());
-                        break;
                     case "gamemode":
                         GAMEMODE = split[1].Trim();
                         break;
@@ -36,7 +33,7 @@ namespace ServerKMP
                         MAX_PLAYERS = ushort.Parse(split[1].Trim());
                         break;
                     case "motd":
-                        MOTD = split[1].Trim();
+                        MOTD = NetworkManager.MOTD = split[1].Trim();
                         break;
                     default:
                         Console.WriteLine($"[ERROR] Found unknown key in config '{split[0]}'");
@@ -46,11 +43,9 @@ namespace ServerKMP
             }
         }
 
-        public static int TPS { get; private set; } = 120; // TPS doesn't reaaaaly matter that much
-        // unity runs around ~160 tps, 120 is good enough, because you get throttled anyway
+        public static int TPS { get; private set; } = 50; // match TPS with Unity's Time.fixedDeltaTime
         public static int MSPT => 1000 / TPS;
         public static ushort PORT { get; private set; } = 11337;
-        public static ushort HTTP_PORT { get; private set; } = 11338;
         public static string GAMEMODE { get; private set; } = "FFA";
         public static ushort MAX_PLAYERS { get; private set; } = 16;
         public static string MOTD = "<MOTD>";

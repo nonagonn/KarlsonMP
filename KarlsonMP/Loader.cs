@@ -74,6 +74,18 @@ namespace KarlsonMP
             {
                 PlaytimeLogic.ClearChat();
             });
+
+            // convars
+            KMP_Console.convars.Add("cl_interp", KEngine.cl_interp);
+            KMP_Console.convars.Add("cl_extrapolate", KEngine.cl_extrapolate);
+
+            // enumerator commands
+            KMP_Console.commands.Add("cvars", (args) =>
+            {
+                KMP_Console.Log("List of ConVars:", true);
+                foreach (var c in KMP_Console.convars)
+                    KMP_Console.Log(c.Key, true);
+            });
             KMP_Console.commands.Add("cmds", (args) =>
             {
                 KMP_Console.Log("List of commands:", true);

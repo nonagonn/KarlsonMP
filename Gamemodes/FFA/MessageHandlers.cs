@@ -1,14 +1,11 @@
 ﻿using ServerKMP;
 using ServerKMP.GamemodeApi;
-using ServerNET_CORE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static ServerKMP.GamemodeApi.MessageComponents;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace FFA
 {
@@ -58,10 +55,7 @@ namespace FFA
             => PositionData((MessageClientToServer.MessagePositionData)_base);
         public static void PositionData(MessageClientToServer.MessagePositionData positionData)
         {
-            if (GamemodeEntry.players[positionData.fromId].spectating != 0) return; // player is spectating, ignore their position
-            // broadcast position to all except client
-            new MessageServerToClient.MessagePositionData(positionData).SendToAll(positionData.fromId);
-            // here we use the constructor i conviniently created to transfer all fields from client message to server message
+            // we don't do anything here lol
         }
 
         public static void RequestScene(MessageClientToServer.MessageBase_C2S _base)

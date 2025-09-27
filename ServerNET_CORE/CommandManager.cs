@@ -40,12 +40,12 @@ namespace ServerKMP
                 else
                 {
                     GamemodeManager.SafeCall(GamemodeManager.currentGamemode!.OnStop);
-                    if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".gmf")))
+                    if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".dll")))
                     {
-                        Console.WriteLine("[ERROR] Couldn't find gamemode " + args[1] + ".gmf");
+                        Console.WriteLine("[ERROR] Couldn't find gamemode " + args[1] + ".dll");
                         return;
                     }
-                    var asm = AppDomain.CurrentDomain.Load(File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".gmf")));
+                    var asm = AppDomain.CurrentDomain.Load(File.ReadAllBytes(Path.Combine(Directory.GetCurrentDirectory(), "Gamemodes", args[1] + ".dll")));
                     var type = asm.GetTypes().Where(x => x.BaseType == typeof(GamemodeApi.Gamemode)).FirstOrDefault();
                     if (type == null)
                     {

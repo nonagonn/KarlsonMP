@@ -16,14 +16,8 @@ namespace ServerKMP
         public static bool IsServerRunning => serverRunning;
         public static void ExitServer() => serverRunning = false;
 
-        // RSA keypair used for one-way encryption of discord bearer (THAT STUFF IS SENSITIVE!!)
-        public static RSACryptoServiceProvider RSA = new RSACryptoServiceProvider(1024);
-        public static byte[] RSA_blob = new byte[0];
-
         static void Main(string[] _)
         {
-            RSA.PersistKeyInCsp = false;
-            RSA_blob = RSA.ExportCspBlob(false);
 
             Config.LoadConfig();
             mainThread = new Thread(MainThread);
@@ -80,12 +74,12 @@ namespace ServerKMP
 
             // shutdown server
             NetworkManager.Exit();
-            RSA.Dispose();
         }
 
         static void Update()
         {
             NetworkManager.Update();
+            TickManager.NextTick();
         }
     }
 }

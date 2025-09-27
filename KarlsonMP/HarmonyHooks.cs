@@ -210,17 +210,47 @@ namespace KarlsonMP
             return false;
         }
     }
-    /*
-    [HarmonyPatch(typeof(PlayerMovement), "FixedUpdate")]
-    public class Hook_PlayerMovement_FixedUpdate
+
+    [HarmonyPatch(typeof(PlayerMovement))]
+    public static class CrouchFixes
     {
-        public static bool Prefix() => !PlaytimeLogic.paused;
+        public static bool Enabled = true;
+        static bool crouching = false;
+        public static void Reset()
+        {
+            Enabled = true;
+            crouching = false;
+        }
+        [HarmonyPatch("StartCrouch")]
+        [HarmonyPrefix]
+        public static bool StartCrouch()
+        {
+            if (!Enabled) return true;
+            if (crouching) return false;
+            crouching = true;
+            return true;
+        }
+
+        [HarmonyPatch("StopCrouch")]
+        [HarmonyPrefix]
+        public static bool StopCrouch()
+        {
+            if (!Enabled) return true;
+            if (!crouching) return false;
+            crouching = false;
+            return true;
+        }
+
+        [HarmonyPatch("MyInput")]
+        [HarmonyPostfix]
+        public static void MyInput(ref bool ___crouching)
+        {
+            if (!Enabled) return;
+            if (crouching && !___crouching) // desync between crouch action and state
+                PlayerMovement.Instance.ReflectionInvoke("StopCrouch");
+            ___crouching = crouching;
+        }
     }
-    [HarmonyPatch(typeof(PlayerMovement), "LateUpdate")]
-    public class Hook_PlayerMovement_LateUpdate
-    {
-        public static bool Prefix() => !PlaytimeLogic.paused;
-    }*/
 
     // Riptide Fix
     [HarmonyPatch(typeof(Peer), "FindMessageHandlers")]
@@ -228,9 +258,7 @@ namespace KarlsonMP
     {
         public static bool Prefix(ref MethodInfo[] __result)
         {
-            KMP_Console.Log("Riptide MessageHandlers fix:");
             __result = Assembly.GetExecutingAssembly().GetTypes().SelectMany(x => x.GetMethods()).Where(m => m.GetCustomAttributes(typeof(MessageHandlerAttribute), false).Length > 0).ToArray();
-            foreach (var x in __result) KMP_Console.Log(x.Name + " @ " + x.DeclaringType.FullName);
             return false;
         }
     }

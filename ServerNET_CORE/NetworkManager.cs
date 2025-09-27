@@ -10,7 +10,6 @@ using System.IO;
 using ServerKMP.GamemodeApi;
 using System.Net;
 using System.Security.Cryptography;
-using ServerNET_CORE;
 
 namespace ServerKMP
 {
@@ -22,6 +21,8 @@ namespace ServerKMP
         public static HashSet<ushort> registeredOnGamemode = new HashSet<ushort>(); // players that were sent to gamemode to be processed via C2S handshake
         public static Dictionary<ushort, string> usernameDatabase = new Dictionary<ushort, string>();
         public static Dictionary<ushort, RSACryptoServiceProvider> passwordEncryption = new Dictionary<ushort, RSACryptoServiceProvider>();
+        public static Dictionary<ushort, bool> broadcastPosition = new Dictionary<ushort, bool>();
+        public static string MOTD = "<MOTD>";
 
         public static void Start()
         {
@@ -37,7 +38,7 @@ namespace ServerKMP
         private static void Server_ClientConnected(object? sender, ServerConnectedEventArgs e)
         {
             Message handshake = Message.Create(MessageSendMode.Reliable, Packet_S2C.handshake);
-            handshake.Add(Config.MOTD).Add((ushort)registeredOnGamemode.Count).Add(server!.MaxClientCount);
+            handshake.Add(MOTD).Add((ushort)registeredOnGamemode.Count).Add(server!.MaxClientCount);
             server!.Send(handshake, e.Client);
             clientsAwaitingHandshake.Add(e.Client.Id);
             KMP_TaskScheduler.Schedule(() =>
@@ -50,9 +51,11 @@ namespace ServerKMP
 
         private static void Server_ClientDisconnected(object? sender, ServerDisconnectedEventArgs e)
         {
-            if(clientsAwaitingHandshake.Contains(e.Client.Id))
+            if (clientsAwaitingHandshake.Contains(e.Client.Id))
                 clientsAwaitingHandshake.Remove(e.Client.Id);
-            if(registeredOnGamemode.Contains(e.Client.Id))
+            if (TickManager.netObjects.ContainsKey(e.Client.Id))
+                TickManager.netObjects.Remove(e.Client.Id);
+            if (registeredOnGamemode.Contains(e.Client.Id))
             {
                 registeredOnGamemode.Remove(e.Client.Id);
                 GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.OnPlayerDisconnect(e.Client.Id));
@@ -99,6 +102,9 @@ namespace ServerKMP
         public const ushort password = 24; // for requesting a password from player
         public const ushort file_dl = 25; // send file for download to the client (includes length and checksum)
         public const ushort file_data = 26; // sending file part in response to client request
+        public const ushort sync = 27; // sync current tick to client
+        public const ushort animationData = 28; // send animation data to clients (doesn't need to be interpolated)
+        public const ushort gamerules = 29; // set of constants that may be expanded later
     }
     public static class Packet_C2S
     {
@@ -123,11 +129,22 @@ namespace ServerKMP
             NetworkManager.clientsAwaitingHandshake.Remove(from);
             NetworkManager.registeredOnGamemode.Add(from);
             NetworkManager.usernameDatabase[from] = username;
+            NetworkManager.broadcastPosition[from] = false;
+            new MessageServerToClient.MessageSync(TickManager.CurrentTick).Send(from);
+            TickManager.netObjects.Add(from, new KPlayer());
             GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageHandshake(from, username)));
         }
         [MessageHandler(Packet_C2S.position)]
         public static void PositionData(ushort from, Message message)
-            => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessagePositionData(from, message)));
+        {
+            var msg = new MessageClientToServer.MessagePositionData(from, message);
+            TickManager.netObjects[from].pos = msg.position;
+            TickManager.netObjects[from].rot = msg.rotation;
+            TickManager.netObjects[from].crouching = msg.crouching;
+            TickManager.netObjects[from].grounded = msg.grounded;
+            TickManager.netObjects[from].moving = msg.moving;
+            GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(msg));
+        }
         [MessageHandler(Packet_C2S.requestScene)]
         public static void RequestScene(ushort from, Message message)
             => GamemodeManager.SafeCall(() => GamemodeManager.currentGamemode!.ProcessMessage(new MessageClientToServer.MessageRequestScene(from, message)));
@@ -149,7 +166,7 @@ namespace ServerKMP
             if (!NetworkManager.passwordEncryption.ContainsKey(from))
                 return; // bad packet
             byte[] pw_enc = message.GetBytes();
-            if(pw_enc.Length == 0)
+            if (pw_enc.Length == 0)
             {
                 NetworkManager.passwordEncryption[from].Dispose();
                 NetworkManager.passwordEncryption.Remove(from);
@@ -167,7 +184,7 @@ namespace ServerKMP
         {
             string fileName = message.GetString();
             // rn we only allow downloading of the map
-            if(fileName != MapManager.currentMap!.name)
+            if (fileName != MapManager.currentMap!.name)
             {
                 new MessageServerToClient.MessageFilePart(Array.Empty<byte>()).Send(from);
                 return;

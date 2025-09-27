@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ServerNET_CORE
+namespace ServerKMP
 {
     public static class FileUploader
     {

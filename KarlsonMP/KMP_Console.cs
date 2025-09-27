@@ -7,6 +7,41 @@ using System.Threading.Tasks;
 
 namespace KarlsonMP
 {
+    public abstract class ConVar
+    {
+        public void Exec(string[] args)
+        {
+            if (args.Length == 1)
+                KMP_Console.Log($"{args[0]} - '{GetValue()}'", true);
+            else
+                SetValue(args[1]);
+        }
+
+        public virtual void SetValue(string input) { }
+        public virtual string GetValue() { return ""; }
+        public override string ToString() => GetValue();
+    }
+
+    public class CV_ushort : ConVar
+    {
+        public ushort Value;
+        public CV_ushort(ushort value)
+        {
+            Value = value;
+        }
+        public override string GetValue()
+        {
+            return Value.ToString();
+        }
+        public override void SetValue(string input)
+        {
+            if (ushort.TryParse(input, out ushort newValue))
+                Value = newValue;
+            else throw new Exception($"Error parsing '{input}'");
+        }
+        public static implicit operator ushort(CV_ushort c) => c.Value;
+    }
+
     public static class KMP_Console
     {
         public static void Log(string message) => Log(message, false);
@@ -23,14 +58,18 @@ namespace KarlsonMP
         public static void ClearScreen() => content = "";
 
         public static Dictionary<string, Action<string[]>> commands = new Dictionary<string, Action<string[]>>();
+        public static Dictionary<string, ConVar> convars = new Dictionary<string, ConVar>();
         public static void _processCommand(string commandString)
         {
+            Log(commandString, true);
             string[] args = commandString.Split(' ');
             string label = args[0];
-            if (!commands.ContainsKey(label))
-                Log("<color=red>Unknwon command</color> " + label + ". Try running <color=yellow>cmds</color> for a list of commands.", true);
-            else
+            if(commands.ContainsKey(label))
                 commands[label](args);
+            else if(convars.ContainsKey(label))
+                convars[label].Exec(args);
+            else
+                Log("<color=red>Unknwon command</color> " + label + ". Try running <color=yellow>cmds</color> for a list of commands.", true);
         }
     }
 }

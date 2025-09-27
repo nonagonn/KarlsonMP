@@ -63,6 +63,8 @@ namespace FFA
             new MessageServerToClient.MessageGiveTakeWeapon("ak47", new Vector3(50f, 50f, 2.5f), new Vector3(0f, 180f, 0f), new Vector3(-0.015f, -0f, 0f), Vector3.zero, "smg", 0.2f, 0.15f, 20, 1, 0.01f, 0.2f, 0, 40f, 0, 0.1f).Send(id);
             new MessageServerToClient.MessageGiveTakeWeapon("deagle", new Vector3(1.44f, 1.44f, 0.527f), new Vector3(-90f, 0f, 0f), new Vector3(-0.3f, -0.3f, 0f), new Vector3(0f, 0.2f, 0.2f), "pistol", 0.3f, 0.4f, 1, 1, 0, 0.7f, 0, 100f, 0, 0).Send(id);
             new MessageServerToClient.MessageGiveTakeWeapon("shotty", new Vector3(40f, 50f, 2.5f), new Vector3(0f, 180f, 0f), Vector3.zero, new Vector3(0f, 0.2f, 0.2f), "shotgun", 0.5f, 1, 8, 6, 0.075f, 0.5f, 7f, 40f, 50f, 1f).Send(id);
+
+            NetworkManager.broadcastPosition[id] = true;
         }
 
         public void EnterSpectate(ushort target)
@@ -71,12 +73,13 @@ namespace FFA
             spectating = target;
 
             // send fake position
-            new MessageServerToClient.MessagePositionData(id, new Vector3(30000f, 30000f, 30000f), Vector2.zero, false, false, false).SendToAll(id);
+            NetworkManager.broadcastPosition[id] = false;
         }
         public void ExitSpectate()
         {
             new MessageServerToClient.MessageSpectate().Send(id);
             spectating = 0;
+            NetworkManager.broadcastPosition[id] = true;
         }
 
         public void EnableAdmin()

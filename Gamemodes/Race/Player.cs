@@ -14,7 +14,6 @@ namespace Race
         public string username;
         public ushort spectating = 0;
         public bool admin;
-        public Vector3 lastPos;
         public DateTime lastTimeInZone;
         public int score;
         public bool weapons;
@@ -57,13 +56,14 @@ namespace Race
         public void RespawnPlayer()
         {
             if (show_hp)
-                new MessageServerToClient.MessageSetHP(101).Send(id);
+                new MessageServerToClient.MessageSetHP(100).Send(id);
             else
                 new MessageServerToClient.MessageSetHP(0).Send(id);
             var pos = MapManager.currentMap!.map_data["spawn"][0];
             new MessageServerToClient.MessageRespawn(pos.Item2).Send(id);
             if (weapons)
                 GiveWeapons();
+            NetworkManager.broadcastPosition[id] = true;
         }
 
         public void EnterSpectate(ushort target)
@@ -73,13 +73,13 @@ namespace Race
 
             new MessageServerToClient.MessageHUDMessage(MessageServerToClient.MessageHUDMessage.ScreenPos.TopCenter, $"<size=25>Spectating {GamemodeEntry.players[target].username}</size>").Send(id);
 
-            // send fake position
-            new MessageServerToClient.MessagePositionData(id, new Vector3(30000f, 30000f, 30000f), Vector2.zero, false, false, false).SendToAll(id);
+            NetworkManager.broadcastPosition[id] = false;
         }
         public void ExitSpectate()
         {
             new MessageServerToClient.MessageSpectate().Send(id);
             spectating = 0;
+            NetworkManager.broadcastPosition[id] = true;
         }
 
         public void EnableAdmin()

@@ -92,8 +92,6 @@ namespace KarlsonMP
 
         private bool crouch, moving, grounded;
         public float animation_rotX { get; private set; }
-        private float coll_oldRotX = 0f;
-        private int animFix = 0;
 
         private static readonly Vector3 neck_Position = new Vector3(0, 0.01452795f, -5.94288e-10f), shouldl_Position = new Vector3(0.006016217f, 0.009278628f, 0.0007523113f), shouldr_Position = new Vector3(-0.0061f, 0.0088f, 0.0026f);
         private static readonly Quaternion neck_Rotation = Quaternion.Euler(-4.07111e-13f, 4.594629e-26f, 1.296e-11f), shouldl_Rotation = Quaternion.Euler(-7.721f, 14.76f, -62.978f), shouldr_Rotation = Quaternion.Euler(-7.721f, -14.76f, 62.978f);
@@ -111,37 +109,20 @@ namespace KarlsonMP
             Transform shoulderL = player.transform.Find("Armature/Hips.Control/Hips/Waist/Torso/LeftShoulderJoint/Shoulder.L");
             Transform shoulderR = player.transform.Find("Armature/Hips.Control/Hips/Waist/Torso/RightShoulderJoint/Shoulder.R");
             Transform neck = player.transform.Find("Armature/Hips.Control/Hips/Waist/Torso/Neck");
+
+            // reset transforms for rotation
+            shoulderL.localPosition = shouldl_Position;
+            shoulderL.localRotation = shouldl_Rotation;
+            shoulderR.localPosition = shouldr_Position;
+            shoulderR.localRotation = shouldr_Rotation;
+            neck.localPosition = neck_Position;
+            neck.localRotation = neck_Rotation;
+
             Vector3 point = neck.position + new Vector3(0f, -0.02f, 0f);
 
-            animFix++;
-            if(animFix == 100)
-            {
-                animFix = 0;
-                shoulderL.localPosition = shouldl_Position;
-                shoulderL.localRotation = shouldl_Rotation;
-                shoulderR.localPosition = shouldr_Position;
-                shoulderR.localRotation = shouldr_Rotation;
-                neck.localPosition = neck_Position;
-                neck.localRotation = neck_Rotation;
-                coll_oldRotX = 0f;
-
-                // apply a small max -15 +15 rotation
-                float angle = animation_rotX;
-                if (angle > 180f)
-                    angle -= 180f;
-                angle = Mathf.Clamp(angle, -15f, 15f);
-                shoulderL.RotateAround(point, player.transform.right, angle - coll_oldRotX);
-                shoulderR.RotateAround(point, player.transform.right, angle - coll_oldRotX);
-                neck.RotateAround(point, player.transform.right, angle - coll_oldRotX);
-                coll_oldRotX = angle;
-
-                return;
-            }
-
-            shoulderL.RotateAround(point, player.transform.right, animation_rotX - coll_oldRotX);
-            shoulderR.RotateAround(point, player.transform.right, animation_rotX - coll_oldRotX);
-            neck.RotateAround(point, player.transform.right, animation_rotX - coll_oldRotX);
-            coll_oldRotX = animation_rotX;
+            shoulderL.RotateAround(point, player.transform.right, animation_rotX);
+            shoulderR.RotateAround(point, player.transform.right, animation_rotX);
+            neck.RotateAround(point, player.transform.right, animation_rotX);
         }
 
         public void Move(Vector3 basicPos, Vector2 rot)
