@@ -37,10 +37,7 @@ namespace ServerKMP
             commands.Add("gamemode", (args) =>
             {
                 if (args.Length != 2) Console.WriteLine("gamemode [mode] - change gamemode to [mode]");
-                else
-                {
-                    GamemodeManager.LoadGamemode(args[1]);
-                }
+                else GamemodeManager.LoadGamemode(args[1]);
             });
 
             commands.Add("cmds", (_) =>
@@ -60,3 +57,4 @@ namespace ServerKMP
         }
     }
 }
+
